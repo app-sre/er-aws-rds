@@ -1,15 +1,33 @@
 import json
+from collections.abc import Iterable
 
 from cdktf import Testing
 
-from er_aws_rds.input import AppInterfaceInput
+from er_aws_rds.input import AppInterfaceInput, Parameter
 
 Testing.__test__ = False
 
 
-def input_data() -> dict:
+def input_data(parameters: Iterable[Parameter] | None) -> dict:
+    """Returns a parsed JSON input as dict"""
+    if not parameters:
+        parameters = [
+            Parameter(
+                name="log_statement", value="none", apply_method="pending-reboot"
+            ),
+            Parameter(
+                name="log_min_duration_statement",
+                value="-1",
+                apply_method="pending-reboot",
+            ),
+        ]
+
+    parameters_json_string = json.dumps([
+        param.dict(by_alias=True) for param in parameters
+    ])
     """Returns a JSON input data"""
-    return json.loads("""{
+    return json.loads(
+        """{
         "data": {
             "engine": "postgres",
             "engine_version": "14.6",
@@ -30,18 +48,9 @@ def input_data() -> dict:
                 "name": "postgres-14",
                 "family": "postgres14",
                 "description": "Parameter Group for PostgreSQL 14",
-                "parameters": [
-                    {
-                        "name": "log_statement",
-                        "value": "none",
-                        "apply_method": "pending-reboot"
-                    },
-                    {
-                        "name": "log_min_duration_statement",
-                        "value": -1,
-                        "apply_method": "pending-reboot"
-                    }
-                ]
+                "parameters": """
+        + parameters_json_string
+        + """
             },
             "output_resource_name": "test-rds-credentials",
             "ca_cert": {
@@ -83,9 +92,10 @@ def input_data() -> dict:
             }
         }
     }
-    """)
+    """
+    )
 
 
 def input_object() -> AppInterfaceInput:
     """Returns an AppInterfaceInput object"""
-    return AppInterfaceInput.model_validate(input_data())
+    return AppInterfaceInput.model_validate(input_data(parameters=None))

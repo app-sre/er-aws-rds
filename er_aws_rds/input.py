@@ -11,6 +11,8 @@ from pydantic import (
     model_validator,
 )
 
+from er_aws_rds.errors import RDSLogicalReplicationError
+
 
 class EventNotification(BaseModel):
     "db_event_subscription for SNS"
@@ -203,10 +205,24 @@ class Rds(RdsAppInterface):
         return self
 
     @model_validator(mode="after")
+    def validate_parameter_group_parameters(self) -> "Rds":
+        """Validate that every parameter complies with our requirements"""
+        if not self.parameter_group:
+            return self
+        for parameter in self.parameter_group.parameters or []:
+            if (
+                parameter.name == "rds.logical_replication"
+                and parameter.apply_method != "pending-reboot"
+            ):
+                msg = "rds.logical_replication must be set to pending-reboot"
+                raise RDSLogicalReplicationError(msg)
+        return self
+
+    @model_validator(mode="after")
     def parameter_groups(self) -> "Rds":
         """old_parameter_group requires parameter_group"""
         if self.old_parameter_group and not self.parameter_group:
-            msg = "old_parameter_group must be used with parameter_group. old_parameter_group is only ysed for RDS major version upgrades"
+            msg = "old_parameter_group must be used with parameter_group. old_parameter_group is only used for RDS major version upgrades"
             raise ValueError(msg)
         if self.old_parameter_group and self.parameter_group:
             default_pg_name = self.identifier + "-pg"
@@ -217,6 +233,7 @@ class Rds(RdsAppInterface):
             if self.old_parameter_group.name == self.parameter_group.name:
                 msg = "parameter_group must have a unique name"
                 raise ValueError(msg)
+
         return self
 
 

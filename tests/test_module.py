@@ -35,7 +35,7 @@ class TestMain:
             },
         )
 
-    def test_shuold_contain_parameter_group(self) -> None:
+    def test_should_contain_parameter_group(self) -> None:
         """Test should_contain_parameter_group"""
         assert Testing.to_have_resource_with_properties(
             self.synthesized,
