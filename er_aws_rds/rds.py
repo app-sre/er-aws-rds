@@ -110,7 +110,7 @@ class Stack(TerraformStack):
             self,
             id=f"{self.data.identifier}-password",
             length=20,
-            min_special=0,  # need to be 0 to import current password. It should be improved in next version of module once the instaces are imported.
+            special=False,  # MasterUserPassword: some special chars are not allowed
             min_numeric=0,
             keepers={"reset_password": self.data.reset_password or ""},
         ).result
