@@ -110,9 +110,9 @@ class Stack(TerraformStack):
             self,
             id=f"{self.data.identifier}-password",
             length=20,
-            # MasterUserPassword Constraints in https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_CreateDBInstance.html
-            override_special="!#$%*()-_=+[]{}<>:?",
-            min_special=0,  # need to be 0 to import current password. It should be improved in next version of module once the instaces are imported.
+            # avoid special chars for MasterUserPassword Constraints in https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_CreateDBInstance.html
+            # also consistent with terraform-resources random password generation
+            special=False,
             min_numeric=0,
             keepers={"reset_password": self.data.reset_password or ""},
         ).result
