@@ -264,17 +264,15 @@ class Stack(TerraformStack):
             )
             TerraformOutput(
                 self,
-                f"{self.data.identifier}__db_username",
-                value=trs.get_string(
-                    "f{self.data.replica_source.identifier}__db_username"
-                ),
+                f"{self.data.identifier}__db_user",
+                value=trs.get_string(f"{self.data.replica_source.identifier}__db_user"),
                 sensitive=True,
             )
             TerraformOutput(
                 self,
                 f"{self.data.identifier}__db_password",
                 value=trs.get_string(
-                    "f{self.data.replica_source.identifier}__db_password"
+                    f"{self.data.replica_source.identifier}__db_password"
                 ),
                 sensitive=True,
             )
