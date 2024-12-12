@@ -83,7 +83,7 @@ class RDSPlanValidator:
 
     def _validate_major_version_upgrade(self) -> None:
         for u in self.aws_db_instance_updates:
-            if not u.change:
+            if not u.change or not u.change.before or not u.change.after:
                 continue
             current_version = u.change.before["engine_version"]
             desired_version = u.change.after["engine_version"]
@@ -110,16 +110,18 @@ class RDSPlanValidator:
 
 
 if __name__ == "__main__":
+    logger = logging.getLogger(__name__)
     app_interface_input: AppInterfaceInput = parse_model(
         AppInterfaceInput,
         read_input_from_file(),
     )
-    logging.info("Running RDS terraform plan validation")
+
+    logger.info("Running RDS terraform plan validation")
     plan = TerraformJsonPlanParser(plan_path=sys.argv[1])
     validator = RDSPlanValidator(plan, app_interface_input)
     if not validator.validate():
-        logging.error(validator.errors)
+        logger.error(validator.errors)
         sys.exit(1)
     else:
-        logging.info("Validation ended succesfully")
+        logger.info("Validation ended succesfully")
         sys.exit(0)
