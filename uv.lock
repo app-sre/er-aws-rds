@@ -184,7 +184,7 @@ requires-dist = [
 dev = [
     { name = "boto3-stubs-lite", extras = ["ec2"], specifier = ">=1.35.46" },
     { name = "mypy", specifier = "~=1.13" },
-    { name = "mypy-boto3-rds", specifier = "~=1.34.145" },
+    { name = "mypy-boto3-rds", specifier = "~=1.35.72" },
     { name = "pytest", specifier = "~=8.2.0" },
     { name = "pytest-cov", specifier = "~=5.0.0" },
     { name = "ruff", specifier = "==0.7.0" },
@@ -279,14 +279,14 @@ wheels = [
 
 [[package]]
 name = "mypy-boto3-rds"
-version = "1.34.152"
+version = "1.35.72"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/37/c1/3e03c44ba84906be50786f324bc0488ee5bf36d60906e225611a7d3cfae6/mypy_boto3_rds-1.34.152.tar.gz", hash = "sha256:a3e25da87116e4b7ec4f1419a35fd3c7491f1cf631d9467cc835bc9c5c23fabe", size = 94343 }
+sdist = { url = "https://files.pythonhosted.org/packages/75/0c/6222a0200d74fcffd867a8abadd861aeda4bbca9482fba61bd0218d19240/mypy_boto3_rds-1.35.72.tar.gz", hash = "sha256:4c345e616a7767953284a0d54ab6dbabd8b068fe353b34194b79364b47176b61", size = 83724 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/52/78/ea038ad37f311c3e0ea9ddf82f9b209dbcbb7b4721a7c7667f550384da24/mypy_boto3_rds-1.34.152-py3-none-any.whl", hash = "sha256:71106812e6e6a89daa99f9b4534c580456336373e6dccb45b652e4d221c7beea", size = 101026 },
+    { url = "https://files.pythonhosted.org/packages/47/a7/4847027a70a4585d39c28bf1a33ffabb41219286a3836083dfd77531c11e/mypy_boto3_rds-1.35.72-py3-none-any.whl", hash = "sha256:acd87fdfd12cc8f7298f586734f5c5e7afb0fcd6da8154a10cccb5730cc5c799", size = 90142 },
 ]
 
 [[package]]
