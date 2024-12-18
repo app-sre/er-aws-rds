@@ -3,7 +3,7 @@ FROM quay.io/redhat-services-prod/app-sre-tenant/er-base-cdktf-main/er-base-cdkt
 LABEL konflux.additional-tags="0.2.1"
 
 FROM base AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.5.4@sha256:5436c72d52c9c0d011010ce68f4c399702b3b0764adcf282fe0e546f20ebaef6 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.5.10@sha256:e4c08963c249b0e07d88e9313374d00491e69eed0c99ca5ee443e5c234a16a38 /uv /bin/uv
 
 COPY cdktf.json ./
 # Download all necessary CDKTF providers and build the python cdktf modules.
@@ -43,7 +43,7 @@ ENV \
     PYTHONPATH="$APP/.gen"
 
 FROM prod AS test
-COPY --from=ghcr.io/astral-sh/uv:0.5.4@sha256:5436c72d52c9c0d011010ce68f4c399702b3b0764adcf282fe0e546f20ebaef6 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.5.10@sha256:e4c08963c249b0e07d88e9313374d00491e69eed0c99ca5ee443e5c234a16a38 /uv /bin/uv
 
 # install test dependencies
 RUN uv sync --frozen
