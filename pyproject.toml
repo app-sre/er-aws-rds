@@ -22,7 +22,7 @@ documentation = "https://github.com/app-sre/er-aws-rds"
 
 [dependency-groups]
 dev = [
-    "ruff ==0.7.0",
+    "ruff ==0.9.1",
     "mypy ~=1.13",
     "pytest ~=8.2.0",
     "pytest-cov ~=5.0.0",
