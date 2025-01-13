@@ -161,6 +161,7 @@ dependencies = [
     { name = "external-resources-io" },
     { name = "mypy-boto3-rds" },
     { name = "pydantic" },
+    { name = "semver" },
 ]
 
 [package.dev-dependencies]
@@ -179,6 +180,7 @@ requires-dist = [
     { name = "external-resources-io", specifier = "~=0.3.2" },
     { name = "mypy-boto3-rds", specifier = "~=1.35.72" },
     { name = "pydantic", specifier = "~=2.8.0" },
+    { name = "semver", specifier = ">=3.0.2" },
 ]
 
 [package.metadata.requires-dev]
@@ -437,6 +439,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c0/0a/1cdbabf9edd0ea7747efdf6c9ab4e7061b085aa7f9bfc36bb1601563b069/s3transfer-0.10.4.tar.gz", hash = "sha256:29edc09801743c21eb5ecbc617a152df41d3c287f67b615f73e5f750583666a7", size = 145287 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/66/05/7957af15543b8c9799209506df4660cba7afc4cf94bfb60513827e96bed6/s3transfer-0.10.4-py3-none-any.whl", hash = "sha256:244a76a24355363a68164241438de1b72f8781664920260c48465896b712a41e", size = 83175 },
+]
+
+[[package]]
+name = "semver"
+version = "3.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/6c/a536cc008f38fd83b3c1b98ce19ead13b746b5588c9a0cb9dd9f6ea434bc/semver-3.0.2.tar.gz", hash = "sha256:6253adb39c70f6e51afed2fa7152bcd414c411286088fb4b9effb133885ab4cc", size = 214988 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/77/0cc7a8a3bc7e53d07e8f47f147b92b0960e902b8254859f4aee5c4d7866b/semver-3.0.2-py3-none-any.whl", hash = "sha256:b1ea4686fe70b981f85359eda33199d60c53964284e0cfb4977d243e37cf4bf4", size = 17099 },
 ]
 
 [[package]]

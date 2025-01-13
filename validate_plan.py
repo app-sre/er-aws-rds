@@ -3,6 +3,7 @@ import sys
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+import semver
 from boto3 import Session
 from botocore.config import Config
 from external_resources_io.input import parse_model, read_input_from_file
@@ -98,9 +99,20 @@ class RDSPlanValidator:
                         f"Desired_version: {desired_version}, "
                         f"Valid update versions: %{valid_update_versions}"
                     )
-                if not self.input.data.allow_major_version_upgrade:
+
+                # Major version upgrade validation
+                semver_current_version = semver.Version.parse(
+                    u.change.before["engine_version"], optional_minor_and_patch=True
+                )
+                semver_desired_version = semver.Version.parse(
+                    u.change.after["engine_version"], optional_minor_and_patch=True
+                )
+                if (
+                    semver_current_version.major != semver_desired_version.major
+                    and not self.input.data.allow_major_version_upgrade
+                ):
                     self.errors.append(
-                        "To enable major version ugprades, allow_major_version_ugprade attribute must be set to True"
+                        "To enable major version ugprades, allow_major_version_upgrade attribute must be set to True"
                     )
 
     def validate(self) -> bool:
