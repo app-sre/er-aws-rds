@@ -86,7 +86,7 @@ def test_parameter_group_name_along_old_parameter_group_without_names() -> None:
     }
     with pytest.raises(
         ValidationError,
-        match=".*Parameter group and old parameter group have the same name.*",
+        match=r".*Parameter group and old parameter group have the same name.*",
     ):
         AppInterfaceInput.model_validate(mod_input)
 
