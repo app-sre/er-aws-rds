@@ -279,7 +279,7 @@ class Rds(RdsAppInterface):
 
     @model_validator(mode="after")
     def monitoring_role_arn_requires_monitoring_interval(self) -> "Rds":
-        """If monitoring_interval is set, enhanced_monitoring must be enabled"""
+        """If monitoring_role_arn is set, monitoring_interval must be != 0"""
         if self.monitoring_role_arn and self.monitoring_interval == 0:
             raise ValueError("monitoring_role_arn requires a monitoring_interval != 0")
         return self

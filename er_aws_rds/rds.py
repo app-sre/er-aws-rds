@@ -175,7 +175,7 @@ class Stack(TerraformStack):
     def _kms_key(self) -> None:
         if self.data.kms_key_id and not self.data.kms_key_id.startswith("arn:"):
             data_kms = DataAwsKmsKey(
-                self, id_="data-kms", key_id=f"{self.data.kms_key_id}"
+                self, id_="data-kms", key_id=f"alias/{self.data.kms_key_id}"
             )
             self.data.kms_key_id = data_kms.arn
 

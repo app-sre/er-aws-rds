@@ -163,3 +163,11 @@ def test_very_long_enhanced_monitoring_role_name() -> None:
         model.data.enhanced_monitoring_role_name
         == "a-very-long-identifier-that-will-generate-a-very-long-role-na-em"
     )
+
+
+def test_kms_key_id_alias_removed() -> None:
+    """Test that kms_key_id_alias is removed from the input data"""
+    mod_input = input_data([])
+    mod_input["data"]["kms_key_id"] = "alias/test"
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert model.data.kms_key_id == "test"
