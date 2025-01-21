@@ -113,7 +113,7 @@ class Stack(TerraformStack):
         ).result
 
     def _enhanced_monitoring(self) -> None:
-        if self.data.enhanced_monitoring:
+        if self.data.enhanced_monitoring and self.data.monitoring_role_arn is None:
             assume_role_policy = {
                 "Version": "2012-10-17",
                 "Statement": [
@@ -124,10 +124,11 @@ class Stack(TerraformStack):
                     }
                 ],
             }
+
             m_role = IamRole(
                 self,
-                id_=self.data.identifier + "-enhanced-monitoring",
-                name=self.data.identifier + "-enhanced-monitoring",
+                id_=self.data.enhanced_monitoring_role_name,
+                name=self.data.enhanced_monitoring_role_name,
                 assume_role_policy=json.dumps(assume_role_policy),
             )
 
