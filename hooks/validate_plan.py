@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import logging
 import sys
 from collections.abc import Mapping

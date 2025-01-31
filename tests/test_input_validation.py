@@ -194,3 +194,11 @@ def test_kms_key_id_alias_removed() -> None:
     })
     model = AppInterfaceInput.model_validate(mod_input)
     assert model.data.kms_key_id == "test"
+
+
+def test_timeouts() -> None:
+    """Test timeouts data"""
+    mod_input = input_data({"data": {"timeouts": {"create": "60m"}}})
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert model.data.timeouts is not None
+    assert model.data.timeouts.create == "60m"

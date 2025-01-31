@@ -89,6 +89,14 @@ class ReplicaSource(BaseModel):
     identifier: str
 
 
+class DBInstanceTimeouts(BaseModel):
+    "DBInstance timeouts"
+
+    create: str | None = None
+    delete: str | None = None
+    update: str | None = None
+
+
 class RdsAppInterface(BaseModel):
     """AppInterface Input parameters
 
@@ -117,7 +125,7 @@ class RdsAppInterface(BaseModel):
     # Output_resource_name is redundant
     output_resource_name: str | None = Field(default=None, exclude=True)
     output_prefix: str = Field(exclude=True)
-    default_tags: Sequence[dict[str, Any]] = Field(default=None, exclude=True)
+    default_tags: Sequence[dict[str, Any]] | None = Field(default=None, exclude=True)
 
 
 class Rds(RdsAppInterface):
@@ -151,6 +159,7 @@ class Rds(RdsAppInterface):
     password: str | None = None
     parameter_group_name: str | None = None
     tags: dict[str, Any]
+    timeouts: DBInstanceTimeouts | None = None
 
     @property
     def enhanced_monitoring_role_name(self) -> str:

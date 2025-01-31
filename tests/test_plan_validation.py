@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 from external_resources_io.terraform import Action, Plan
-from validate_plan import RDSPlanValidator
+from hooks.validate_plan import RDSPlanValidator
 
 from .conftest import input_object
 

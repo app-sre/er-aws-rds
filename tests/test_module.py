@@ -46,6 +46,31 @@ def test_should_contain_rds_instance() -> None:
     )
 
 
+def test_timeouts() -> None:
+    """Test should_contain_rds_instance"""
+    assert Testing.to_have_resource_with_properties(
+        build_synth(
+            additional_data={"data": {"timeouts": {"create": "60m", "update": "60m"}}}
+        ),
+        DbInstance.TF_RESOURCE_TYPE,
+        {
+            "identifier": "test-rds",
+            "engine": "postgres",
+            "db_name": "postgres",
+            "allocated_storage": 20,
+            "parameter_group_name": "test-rds-postgres-14",
+            "tags": {
+                "app": "external-resources-poc",
+                "cluster": "appint-ex-01",
+                "environment": "stage",
+                "managed_by_integration": "external_resources",
+                "namespace": "external-resources-poc",
+            },
+            "timeouts": {"create": "60m", "update": "60m"},
+        },
+    )
+
+
 def test_should_contain_parameter_group() -> None:
     """Test should_contain_parameter_group"""
     assert Testing.to_have_resource_with_properties(
