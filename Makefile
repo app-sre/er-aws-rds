@@ -11,7 +11,7 @@ image_tests:
 	# test /tmp must be empty
 	[ -z "$(shell ls -A /tmp)" ]
 	# validate_plan.py must exist
-	[ -f "validate_plan.py" ]
+	[ -f "hooks/validate_plan.py" ]
 
 .PHONY: code_tests
 code_tests:
