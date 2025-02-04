@@ -1,4 +1,9 @@
 {
-    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "extends": ["github>app-sre/shared-pipelines//renovate/default.json"]
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>app-sre/shared-pipelines//renovate/default.json"
+  ],
+  "pin": {
+    "automerge": true
   }
+}
