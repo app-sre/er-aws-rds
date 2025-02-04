@@ -35,16 +35,16 @@ wheels = [
 
 [[package]]
 name = "boto3-stubs-lite"
-version = "1.36.11"
+version = "1.36.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore-stubs" },
     { name = "types-s3transfer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/a0/5761862d7d1bae10a32c52ae4ce49ee1a0e7325b82b5ff8b01eccb9c95fb/boto3_stubs_lite-1.36.11.tar.gz", hash = "sha256:bde47744a759bd68fdc1fc25cc2e141ff379732576723b15f2199b0ced08fb94", size = 71294 }
+sdist = { url = "https://files.pythonhosted.org/packages/26/5c/1b4328c455878f379e850343e70f49d134622e7f95fd3955edcf7476cf69/boto3_stubs_lite-1.36.12.tar.gz", hash = "sha256:f2de783474edfa392dfe860fc37667f4cac88a661879d5ea1a4b25684cb83eb1", size = 71348 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/66/50c08f23bea2f85f6519877689d4281353c3e8e30768d290513a5b989658/boto3_stubs_lite-1.36.11-py3-none-any.whl", hash = "sha256:3e2760d471d83673637eed155cecad0317182f9954ae3bb2e5d98ad8e3def06f", size = 42263 },
+    { url = "https://files.pythonhosted.org/packages/f9/73/91476dc87b8bf3bf1463a3fb519d72f5e4077a8a430a6817ea46f592356c/boto3_stubs_lite-1.36.12-py3-none-any.whl", hash = "sha256:4ee90a507462787eea37e10172bc7f94b7ea4232d541bab30246b0308eb98c92", size = 42263 },
 ]
 
 [package.optional-dependencies]
@@ -68,14 +68,14 @@ wheels = [
 
 [[package]]
 name = "botocore-stubs"
-version = "1.36.11"
+version = "1.36.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "types-awscrt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8f/b7/285ad88a0eca52254d537d583832e7abb10ca4af6de9cae1a1c92f54ab77/botocore_stubs-1.36.11.tar.gz", hash = "sha256:4c18f0994254456f834d0129ed1f49421c8cd80047c4e5db90070f69f0e6f3d2", size = 41186 }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/c1/4208a54e65727435a9fbda1cedd56a36478c60b398839d6d772b55b2e2b7/botocore_stubs-1.36.12.tar.gz", hash = "sha256:c1e7eac810e42de49b47cb23c118db206c0e719130e468ddedcb0eb82c21904c", size = 41179 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/52/66/88eaa062ebd11d706346a5609df3ac05451ca103034ca9e3ebd0ec95157b/botocore_stubs-1.36.11-py3-none-any.whl", hash = "sha256:f9dfb3f078a83de4383806680890e24508eb0c84f6468b109272e934a21c2705", size = 64019 },
+    { url = "https://files.pythonhosted.org/packages/b6/1d/a76ffee6a0be07b1997bb4a2700685f6b352bd8ccf35ea472e32f6988750/botocore_stubs-1.36.12-py3-none-any.whl", hash = "sha256:31d17381def93fa41d009e11ccfb0a846a878dcf84f97c229bfb7ceffad7a56a", size = 64019 },
 ]
 
 [[package]]
