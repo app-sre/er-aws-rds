@@ -139,6 +139,7 @@ class RDSPlanValidator:
     def validate(self) -> bool:
         """Validate method"""
         self._validate_major_version_upgrade()
+        self._validate_deletion_protection_not_enabled_on_destroy()
         return not self.errors
 
 
