@@ -1,4 +1,5 @@
 import json
+import tempfile
 from typing import Any
 
 import pytest
@@ -16,12 +17,13 @@ from .conftest import input_object
 
 def build_synth(additional_data: dict[str, Any] | None = None) -> str:
     """Create Synth"""
-    stack = Stack(
-        Testing.app(),
-        "CDKTF",
-        input_object(additional_data=additional_data),
-    )
-    return Testing.synth(stack)
+    with tempfile.TemporaryDirectory() as outdir:
+        stack = Stack(
+            Testing.app(outdir=outdir),
+            "CDKTF",
+            input_object(additional_data=additional_data),
+        )
+        return Testing.synth(stack)
 
 
 def test_should_contain_rds_instance() -> None:
