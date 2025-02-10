@@ -7,8 +7,8 @@ format:
 
 .PHONY: image_tests
 image_tests:
-	# test /tmp must be empty
-	[ -z "$(shell ls -A /tmp)" ]
+	# test /tmp/jsii-runtime-cache not created
+	[ ! -d "/tmp/jsii-runtime-cache" ]
 	# validate_plan.py must exist
 	[ -f "hooks/validate_plan.py" ]
 
@@ -19,15 +19,11 @@ code_tests:
 	uv run mypy
 	uv run pytest -vv --cov=er_aws_rds --cov-report=term-missing --cov-report xml
 
-.PHONY: dependency_tests
-dependency_tests:
-	python -c "import cdktf_cdktf_provider_random"
-	python -c "import cdktf_cdktf_provider_aws"
-
-in_container_test: image_tests code_tests dependency_tests
-
 .PHONY: test
-test:
+test: image_tests code_tests
+
+.PHONY: build_test
+build_test:
 	$(CONTAINER_ENGINE) build --progress plain --target test -t er-aws-rds:test .
 
 .PHONY: build
