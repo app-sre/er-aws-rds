@@ -5,5 +5,8 @@
   ],
   "pin": {
     "automerge": true
+  },
+  "pinDigest": {
+    "automerge": true
   }
 }
