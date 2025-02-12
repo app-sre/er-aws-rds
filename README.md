@@ -97,8 +97,8 @@ Start container
 ```shell
 docker run --rm -ti \
   --entrypoint /bin/bash \
-  --mount type=bind,source=$PWD/input.json,target=/inputs/input.json \
-  --mount type=bind,source=$PWD/tmp/credentials,target=/credentials \
+  -v $PWD/input.json:/inputs/input.json:Z \
+  -v $PWD/credentials:/credentials:Z \
   -e AWS_SHARED_CREDENTIALS_FILE=/credentials \
   er-aws-rds:prod
 ```
