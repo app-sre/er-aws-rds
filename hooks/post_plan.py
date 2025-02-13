@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import logging
+import logging.config
 import sys
 
 import semver
@@ -14,10 +15,8 @@ from external_resources_io.terraform import (
 
 from er_aws_rds.input import AppInterfaceInput
 from hooks.utils.aws_api import AWSApi
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("botocore")
-logger.setLevel(logging.ERROR)
+from hooks.utils.envvars import RuntimeEnvVars
+from hooks.utils.logger import setup_logging
 
 
 class RDSPlanValidator:
@@ -103,14 +102,19 @@ class RDSPlanValidator:
 
 
 if __name__ == "__main__":
+    setup_logging()
     logger = logging.getLogger(__name__)
+
+    RuntimeEnvVars.check([RuntimeEnvVars.PLAN_FILE_JSON])
+    terraform_plan_json = RuntimeEnvVars.PLAN_FILE_JSON.get()
+
     app_interface_input: AppInterfaceInput = parse_model(
         AppInterfaceInput,
         read_input_from_file(),
     )
 
     logger.info("Running RDS terraform plan validation")
-    parser = TerraformJsonPlanParser(plan_path=sys.argv[1])
+    parser = TerraformJsonPlanParser(plan_path=terraform_plan_json)
     validator = RDSPlanValidator(parser.plan, app_interface_input)
     if not validator.validate():
         logger.error(validator.errors)

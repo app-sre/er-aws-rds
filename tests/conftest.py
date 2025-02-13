@@ -1,10 +1,6 @@
 from typing import Any
 
-from cdktf import Testing
-
 from er_aws_rds.input import AppInterfaceInput
-
-Testing.__test__ = False
 
 
 def deep_merge(dict1: dict[str, Any], dict2: dict[str, Any]) -> dict[str, Any]:

@@ -7,6 +7,7 @@ from pydantic import (
     ConfigDict,
     Field,
     computed_field,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -64,22 +65,14 @@ class ParameterGroup(BaseModel):
     family: str
     name: str | None = None
     description: str | None = None
-    parameters: list[Parameter] | None = Field(default=None, exclude=True)
+    parameters: list[Parameter] | None = Field(default=None)
+
+    @field_serializer("name")
+    def serialize_name(self, _: str) -> str:
+        return self.computed_pg_name
 
     # This attribute is set by a model_validator in the RDS class
     computed_pg_name: str = Field(default="", exclude=True)
-
-    # This was used to populate DbParameterGroup(self, **pg.model_dump()) directy
-    # but it did not work. "parameters" come from App-Interface but terraform needs "parameter" (singular)
-    # @computed_field
-    # def parameter(self) -> list[Parameter] | None:
-    #     if self.parameters:
-    #         return self.parameters
-    #     return None
-
-    # @computed_field
-    # def id_(self) -> str:
-    #     return self.name or ""
 
 
 class ReplicaSource(BaseModel):
@@ -114,17 +107,21 @@ class RdsAppInterface(BaseModel):
     old_parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
     replica_source: ReplicaSource | None = Field(default=None, exclude=True)
     enhanced_monitoring: bool | None = Field(default=None, exclude=True)
-    reset_password: str | None = Field(default=None, exclude=True)
+    reset_password: str | None = Field(default="", exclude=True)
     ca_cert: VaultSecret | None = Field(default=None, exclude=True)
     annotations: str | None = Field(default=None, exclude=True)
     event_notifications: list[EventNotification] | None = Field(
         default=None, exclude=True
     )
     data_classification: DataClassification | None = Field(default=None, exclude=True)
+    # This value is use to override the db_name set in the outputs
     output_resource_db_name: str | None = Field(default=None, exclude=True)
     # Output_resource_name is redundant
     output_resource_name: str | None = Field(default=None, exclude=True)
+    # output_prefix is not necessary since now each resources has it own state.
     output_prefix: str = Field(exclude=True)
+
+    tags: dict[str, Any] | None = Field(default=None, exclude=True)
     default_tags: Sequence[dict[str, Any]] | None = Field(default=None, exclude=True)
 
 
@@ -158,7 +155,6 @@ class Rds(RdsAppInterface):
     # _password is not in the input, the field is used to populate the random password
     password: str | None = None
     parameter_group_name: str | None = None
-    tags: dict[str, Any]
     timeouts: DBInstanceTimeouts | None = None
 
     @property
@@ -170,11 +166,6 @@ class Rds(RdsAppInterface):
             if len(base_name) <= ENHANCED_MONITORING_ROLE_NAME_MAX_LENGTH
             else self.identifier[:61].rstrip("-") + "-em"
         )
-
-    @computed_field
-    def id_(self) -> str:
-        """id_"""
-        return self.identifier
 
     @computed_field
     def db_name(self) -> str | None:
@@ -216,17 +207,30 @@ class Rds(RdsAppInterface):
     @model_validator(mode="after")
     def replication(self) -> "Rds":
         """replica_source and replicate_source_db are mutually excluive"""
-        if self.replica_source and self.replicate_source_db:
+        if not self.replica_source:
+            return self
+
+        if self.replicate_source_db:
             msg = "Only one of replicate_source_db or replica_source can be defined"
             raise ValueError(msg)
-        if self.replica_source and self.replica_source.region != self.region:
-            # CROSS-REGION Replication
+        if self.replica_source.region != self.region or self.db_subnet_group_name:
+            # Cross-region replication or different db_subnet_group_name.
+            # The ARN must be set in the replicate_source_db attribute for these cases.
+            # The ARN is resolved in the module using a Datasource.
+            # The Datasource required attribuets are fed with the replica_source variable.
             if not self.db_subnet_group_name:
                 msg = "db_subnet_group_name must be defined for cross-region replicas"
                 raise ValueError(msg)
             if self.storage_encrypted and not self.kms_key_id:
                 msg = "storage_encrypted ignored for cross-region read replica. Set kms_key_id"
                 raise ValueError(msg)
+        else:
+            # Same-region replication. The instance identifier must be supplied int the replicate_source_db attr.
+            self.replicate_source_db = self.replica_source.identifier
+            self.replica_source = None
+
+        # No backup for replicas
+        self.backup_retention_period = 0
         return self
 
     @model_validator(mode="after")
@@ -261,10 +265,7 @@ class Rds(RdsAppInterface):
                 f"{self.identifier}-{self.old_parameter_group.name or 'pg'}"
             )
 
-            if (
-                self.old_parameter_group.computed_pg_name
-                == self.parameter_group.computed_pg_name
-            ):
+            if self.old_parameter_group.name == self.parameter_group.name:
                 msg = "Parameter group and old parameter group have the same name. Assign a name to the new parameter group"
                 raise ValueError(msg)
 
@@ -313,3 +314,61 @@ class AppInterfaceInput(BaseModel):
 
     data: Rds
     provision: AppInterfaceProvision
+
+
+class TerraformModuleData(BaseModel):
+    """Variables to feed the Terraform Module"""
+
+    ai_input: AppInterfaceInput = Field(exclude=True)
+
+    @computed_field
+    def rds_instance(self) -> Rds | None:
+        """The db_instance variable"""
+        return self.ai_input.data
+
+    @computed_field
+    def parameter_groups(self) -> list[ParameterGroup] | None:
+        """Parameter groups to create"""
+        return [
+            pg
+            for pg in [
+                self.ai_input.data.parameter_group,
+                self.ai_input.data.old_parameter_group,
+            ]
+            if pg
+        ]
+
+    @computed_field
+    def reset_password(self) -> str | None:
+        """Terraform password variable"""
+        return self.ai_input.data.reset_password
+
+    @computed_field
+    def enhanced_monitoring_role(self) -> str | None:
+        """Sets the enhanced monitoring terraform variable if needed"""
+        if (
+            self.ai_input.data.enhanced_monitoring
+            and self.ai_input.data.monitoring_role_arn is None
+        ):
+            return self.ai_input.data.enhanced_monitoring_role_name
+        return None
+
+    @computed_field
+    def replica_source(self) -> ReplicaSource | None:
+        """ReplicaSource terraform variable"""
+        return self.ai_input.data.replica_source
+
+    @computed_field
+    def tags(self) -> dict[str, Any] | None:
+        """Tags"""
+        return self.ai_input.data.tags
+
+    @computed_field
+    def region(self) -> str:
+        """Tags"""
+        return self.ai_input.data.region
+
+    @computed_field
+    def provision(self) -> AppInterfaceProvision:
+        """Provision"""
+        return self.ai_input.provision

@@ -4,13 +4,14 @@ CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo 
 format:
 	uv run ruff check
 	uv run ruff format
+	terraform fmt -check module/
+	terraform fmt module/
 
 .PHONY: image_tests
 image_tests:
-	# test /tmp/jsii-runtime-cache not created
-	[ ! -d "/tmp/jsii-runtime-cache" ]
 	# validate_plan.py must exist
-	[ -f "hooks/validate_plan.py" ]
+	[ -f "hooks/pre_plan.py" ]
+	[ -f "hooks/post_plan.py" ]
 
 .PHONY: code_tests
 code_tests:
@@ -19,8 +20,11 @@ code_tests:
 	uv run mypy
 	uv run pytest -vv --cov=er_aws_rds --cov-report=term-missing --cov-report xml
 
+.PHONY: terraform_tests
+terraform_tests:
+	terraform fmt -check -diff module/
 .PHONY: test
-test: image_tests code_tests
+test: image_tests code_tests terraform_tests
 
 .PHONY: build_test
 build_test:
