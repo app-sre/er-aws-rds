@@ -26,30 +26,32 @@ This will auto create a `venv`, to activate in shell:
 source .venv/bin/activate
 ```
 
-Optional config `.env`:
-
-```shell
-cp .env.example .env
-```
-
-Edit `.env` file with credentials
-
-```shell
-qontract-cli --config $CONFIG get aws-creds $ACCOUNT
-```
-
-Export to current shell
-
-```shell
-source .env
-```
-
 ## Debugging
 
 Export `input.json` via `qontract-cli` and place it in the current project root dir.
 
 ```shell
 qontract-cli --config $CONFIG external-resources --provisioner $PROVISIONER --provider $PROVIDER --identifier $IDENTIFIER get-input > input.json
+```
+
+Get `credentials`
+
+```shell
+qontract-cli --config $CONFIG external-resources --provisioner $PROVISIONER --provider $PROVIDER --identifier $IDENTIFIER get-credentials > credentials
+```
+
+Optional config `.env`:
+
+```shell
+cp .env.example .env
+```
+
+Populate `.env` values with absolute path
+
+Export to current shell
+
+```shell
+export $(cat .env | xargs)
 ```
 
 ### On Host
@@ -95,8 +97,9 @@ Start container
 ```shell
 docker run --rm -ti \
   --entrypoint /bin/bash \
-  --mount type=bind,source=$PWD/input.json,target=/inputs/input.json \
-  --env-file .env \
+  -v $PWD/input.json:/inputs/input.json:Z \
+  -v $PWD/credentials:/credentials:Z \
+  -e AWS_SHARED_CREDENTIALS_FILE=/credentials \
   er-aws-rds:prod
 ```
 
