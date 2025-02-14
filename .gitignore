@@ -173,3 +173,7 @@ tmp/
 .gen
 
 .vscode/
+module/.terraform/
+module/.terraform.*
+module/backend.tf
+module/tfvars.json

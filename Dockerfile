@@ -1,6 +1,6 @@
-FROM quay.io/redhat-services-prod/app-sre-tenant/er-base-cdktf-main/er-base-cdktf-main:cdktf-0.20.11-tf-1.6.6-py-3.12-v0.6.0-2@sha256:4a867e42a2b93bc2507d0b23942b802f1d71767e78dfa619792082d528526bcd AS base
+FROM quay.io/redhat-services-prod/app-sre-tenant/er-base-terraform-main/er-base-terraform-main:tf-1.6.6-py-3.12-v0.2.0-2 AS base
 # keep in sync with pyproject.toml
-LABEL konflux.additional-tags="0.3.1"
+LABEL konflux.additional-tags="0.4.0"
 
 FROM base AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.5.25@sha256:a73176b27709bff700a1e3af498981f31a83f27552116f21ae8371445f0be710 /uv /bin/uv
@@ -15,7 +15,7 @@ ENV \
     VIRTUAL_ENV="${APP}/.venv" \
     PATH="${APP}/.venv/bin:${PATH}"
 
-COPY cdktf.json pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock ./
 # Test lock file is up to date
 RUN uv lock --locked
 # Install dependencies

@@ -8,9 +8,6 @@ readme = "README.md"
 requires-python = "~= 3.12.0"
 dependencies = [
     "boto3 ~=1.35.47",
-    "cdktf ==0.20.10",
-    "cdktf-cdktf-provider-aws==19.19.0",
-    "cdktf-cdktf-provider-random==11.0.3",
     "external-resources-io ~=0.4.0",
     "mypy_boto3_rds ~=1.35.72",
     "pip>=25.0",
@@ -33,7 +30,7 @@ dev = [
 ]
 
 [project.scripts]
-er-aws-rds = 'er_aws_rds.__main__:main'
+generate-tf-config = 'er_aws_rds.config:generate_tf_files'
 
 [build-system]
 requires = ["hatchling"]
