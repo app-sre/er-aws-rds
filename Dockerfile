@@ -3,7 +3,7 @@ FROM quay.io/redhat-services-prod/app-sre-tenant/er-base-cdktf-main/er-base-cdkt
 LABEL konflux.additional-tags="0.3.1"
 
 FROM base AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.5.25@sha256:a73176b27709bff700a1e3af498981f31a83f27552116f21ae8371445f0be710 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.6.0@sha256:63b7453435641145dc3afab79a6bc2b6df6f77107bec2d0df39fd27b1c791c0a /uv /bin/uv
 
 # Python and UV related variables
 ENV \
