@@ -74,6 +74,27 @@ class ReplicaSource(BaseModel):
     identifier: str
 
 
+class BlueGreenDeploymentTarget(BaseModel):
+    "AppInterface BlueGreenDeployment.Target"
+
+    allocated_storage: int | None = None
+    engine_version: str | None = None
+    instance_class: str | None = None
+    iops: int | None = None
+    parameter_group: ParameterGroup | None = None
+    storage_throughput: int | None = None
+    storage_type: str | None = None
+
+
+class BlueGreenDeployment(BaseModel):
+    "AppInterface BlueGreenDeployment"
+
+    enabled: bool
+    switchover: bool
+    delete: bool
+    target: BlueGreenDeploymentTarget | None = None
+
+
 class DBInstanceTimeouts(BaseModel):
     "DBInstance timeouts"
 
@@ -101,6 +122,9 @@ class RdsAppInterface(BaseModel):
     region: str = Field(exclude=True)
     parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
     old_parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
+    blue_green_deployment: BlueGreenDeployment | None = Field(
+        default=None, exclude=True
+    )
     replica_source: ReplicaSource | None = Field(default=None, exclude=True)
     enhanced_monitoring: bool | None = Field(default=None, exclude=True)
     reset_password: str | None = Field(default="", exclude=True)
@@ -271,6 +295,22 @@ class Rds(RdsAppInterface):
                 msg = "Parameter group and old parameter group have the same name. Assign a name to the new parameter group"
                 raise ValueError(msg)
 
+        if (
+            self.blue_green_deployment
+            and self.blue_green_deployment.target
+            and (pg := self.blue_green_deployment.target.parameter_group)
+        ):
+            pg.computed_pg_name = f"{self.identifier}-{pg.name or 'pg'}"
+            if not self.blue_green_deployment.enabled:
+                parameter_group_names = {
+                    group.computed_pg_name
+                    for group in [self.parameter_group, self.old_parameter_group]
+                    if group
+                }
+                if pg.computed_pg_name in parameter_group_names:
+                    raise ValueError(
+                        "Blue/Green Deployment Parameter Group name already exist"
+                    )
         return self
 
     @property
