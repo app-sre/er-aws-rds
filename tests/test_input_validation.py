@@ -94,6 +94,107 @@ def test_parameter_group_along_old_parameter_group_without_names() -> None:
         AppInterfaceInput.model_validate(mod_input)
 
 
+def test_blue_green_deployment_parameter_group_default_name() -> None:
+    """Test Blue/Green Deployment parameter group default name"""
+    mod_input = input_data({
+        "data": {
+            "blue_green_deployment": {
+                "enabled": True,
+                "switchover": True,
+                "delete": True,
+                "target": {
+                    "parameter_group": {
+                        "family": "postgres16",
+                    }
+                },
+            }
+        }
+    })
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert (
+        model.data.blue_green_deployment.target.parameter_group.computed_pg_name
+        == f"{model.data.identifier}-pg"
+    )
+
+
+def test_blue_green_deployment_parameter_group_name() -> None:
+    """Test Blue/Green Deployment parameter group name"""
+    mod_input = input_data({
+        "data": {
+            "blue_green_deployment": {
+                "enabled": True,
+                "switchover": True,
+                "delete": True,
+                "target": {
+                    "parameter_group": {
+                        "name": "new-pg",
+                        "family": "postgres16",
+                    }
+                },
+            }
+        }
+    })
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert (
+        model.data.blue_green_deployment.target.parameter_group.computed_pg_name
+        == f"{model.data.identifier}-new-pg"
+    )
+
+
+def test_blue_green_deployment_parameter_group_conflict_when_not_enabled() -> None:
+    """Test Blue/Green Deployment parameter group name unique"""
+    mod_input = input_data({
+        "data": {
+            "parameter_group": {
+                "name": "pg",
+            },
+            "blue_green_deployment": {
+                "enabled": False,
+                "switchover": False,
+                "delete": False,
+                "target": {
+                    "parameter_group": {
+                        "name": "pg",
+                        "family": "postgres16",
+                    }
+                },
+            },
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match="Blue/Green Deployment Parameter Group name already exist",
+    ):
+        AppInterfaceInput.model_validate(mod_input)
+
+
+def test_blue_green_deployment_parameter_group_ignore_conflict_when_enabled() -> None:
+    """Test Blue/Green Deployment parameter group name ignore unique check"""
+    mod_input = input_data({
+        "data": {
+            "parameter_group": {
+                "name": "pg",
+            },
+            "blue_green_deployment": {
+                "enabled": True,
+                "switchover": False,
+                "delete": False,
+                "target": {
+                    "parameter_group": {
+                        "name": "pg",
+                        "family": "postgres16",
+                    }
+                },
+            },
+        }
+    })
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert (
+        model.data.blue_green_deployment.target.parameter_group.computed_pg_name
+        == f"{model.data.identifier}-pg"
+    )
+
+
 def test_name() -> None:
     """Test name not set validates ok"""
     mod_input = input_data()
