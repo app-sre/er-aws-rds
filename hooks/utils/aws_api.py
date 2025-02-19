@@ -1,24 +1,21 @@
-from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from boto3 import Session
-from botocore.config import Config
-from mypy_boto3_rds import RDSClient
 
 if TYPE_CHECKING:
+    from mypy_boto3_rds import RDSClient
     from mypy_boto3_rds.type_defs import FilterTypeDef
+from mypy_boto3_rds.type_defs import DBInstanceTypeDef
+
+from hooks.utils.models import CreateBlueGreenDeploymentParams
 
 
 class AWSApi:
     """AWS Api Class"""
 
-    def __init__(self, config_options: Mapping[str, Any]) -> None:
-        self.session = Session()
-        self.config = Config(**config_options)
-
-    def get_rds_client(self) -> RDSClient:
-        """Gets a boto RDS client"""
-        return self.session.client("rds", config=self.config)
+    def __init__(self, region_name: str | None = None) -> None:
+        self.session = Session(region_name=region_name)
+        self.rds_client: RDSClient = self.session.client("rds")
 
     def is_rds_engine_version_available(self, engine: str, version: str) -> bool:
         """Gets the available versions for an Rds engine"""
@@ -32,7 +29,7 @@ class AWSApi:
 
     def get_rds_valid_update_versions(self, engine: str, version: str) -> set[str]:
         """Gets the valid update versions"""
-        data = self.get_rds_client().describe_db_engine_versions(
+        data = self.rds_client.describe_db_engine_versions(
             Engine=engine, EngineVersion=version, IncludeAll=True
         )
 
@@ -48,5 +45,17 @@ class AWSApi:
         filters: list[FilterTypeDef] = [
             {"Name": "db-parameter-group-family", "Values": [engine]},
         ]
-        resp = self.get_rds_client().describe_db_parameter_groups(Filters=filters)
+        resp = self.rds_client.describe_db_parameter_groups(Filters=filters)
         return {group["DBParameterGroupName"] for group in resp["DBParameterGroups"]}
+
+    def get_db_instance(self, identifier: str) -> DBInstanceTypeDef | None:
+        """Get DB instance info"""
+        data = self.rds_client.describe_db_instances(DBInstanceIdentifier=identifier)
+        return data["DBInstances"][0] if data["DBInstances"] else None
+
+    def create_blue_green_deployment(
+        self, params: CreateBlueGreenDeploymentParams
+    ) -> None:
+        """Create Blue/Green Deployment"""
+        kwargs = params.model_dump(by_alias=True, exclude_none=True)
+        self.rds_client.create_blue_green_deployment(**kwargs)
