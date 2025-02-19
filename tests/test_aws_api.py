@@ -58,6 +58,9 @@ def test_get_db_instance(mock_rds_client: Mock) -> None:
     result = aws_api.get_db_instance("identifier")
 
     assert result == expected_result
+    mock_rds_client.describe_db_instances.assert_called_once_with(
+        DBInstanceIdentifier="identifier"
+    )
 
 
 def test_get_db_instance_not_found(mock_rds_client: Mock) -> None:
@@ -118,3 +121,36 @@ def test_create_blue_green_deployment_with_all_params(mock_rds_client: Mock) -> 
         TargetStorageType="gp3",
         Tags=[{"Key": "k", "Value": "v"}],
     )
+
+
+def test_get_blue_green_deployment(mock_rds_client: Mock) -> None:
+    """Test get_blue_green_deployment"""
+    expected_result = {"BlueGreenDeploymentName": "name"}
+    mock_rds_client.describe_blue_green_deployments.return_value = {
+        "BlueGreenDeployments": [expected_result]
+    }
+    aws_api = AWSApi()
+
+    result = aws_api.get_blue_green_deployment("name")
+
+    assert result == expected_result
+    mock_rds_client.describe_blue_green_deployments.assert_called_once_with(
+        Filters=[
+            {
+                "Name": "blue-green-deployment-name",
+                "Values": ["name"],
+            }
+        ]
+    )
+
+
+def test_get_blue_green_deployment_when_not_found(mock_rds_client: Mock) -> None:
+    """Test get_blue_green_deployment"""
+    mock_rds_client.describe_blue_green_deployments.return_value = {
+        "BlueGreenDeployments": []
+    }
+    aws_api = AWSApi()
+
+    result = aws_api.get_blue_green_deployment("name")
+
+    assert result is None

@@ -96,7 +96,7 @@ BLUE_GREEN_DEPLOYMENT_ENABLED = {
         (BLUE_GREEN_DEPLOYMENT_ENABLED, False),
     ],
 )
-def test_run_when_create_blue_green_deployment_with_default_target(
+def test_run_create_blue_green_deployment_with_default_target(
     mock_aws_api: Mock,
     mock_logging: Mock,
     additional_data: dict,
@@ -105,6 +105,7 @@ def test_run_when_create_blue_green_deployment_with_default_target(
 ) -> None:
     """Test create default"""
     mock_aws_api.get_db_instance.return_value = {"DBInstanceArn": "some-arn"}
+    mock_aws_api.get_blue_green_deployment.return_value = None
     manager = BlueGreenDeploymentManager(
         aws_api=mock_aws_api,
         app_interface_input=input_object(additional_data),
@@ -150,13 +151,13 @@ def test_run_when_create_blue_green_deployment_with_default_target(
         (BLUE_GREEN_DEPLOYMENT_ENABLED, False),
     ],
 )
-def test_run_when_create_blue_green_deployment_when_rds_not_found(
+def test_run_create_blue_green_deployment_when_rds_not_found(
     mock_aws_api: Mock,
     additional_data: dict,
     *,
     dry_run: bool,
 ) -> None:
-    """Test create default"""
+    """Test create when not found"""
     mock_aws_api.get_db_instance.return_value = None
     manager = BlueGreenDeploymentManager(
         aws_api=mock_aws_api,
@@ -168,3 +169,38 @@ def test_run_when_create_blue_green_deployment_when_rds_not_found(
         manager.run()
 
     mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
+
+
+@pytest.mark.parametrize(
+    ("additional_data", "dry_run"),
+    [
+        (BLUE_GREEN_DEPLOYMENT_ENABLED, True),
+        (BLUE_GREEN_DEPLOYMENT_ENABLED, False),
+    ],
+)
+def test_run_when_create_blue_green_deployment_when_already_created(
+    mock_aws_api: Mock,
+    mock_logging: Mock,
+    additional_data: dict,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test create when already created"""
+    mock_aws_api.get_db_instance.return_value = {"DBInstanceArn": "some-arn"}
+    mock_aws_api.get_blue_green_deployment.return_value = {
+        "BlueGreenDeploymentName": "test-rds",
+        "Status": "PROVISIONING",
+    }
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(additional_data),
+        dry_run=dry_run,
+    )
+
+    manager.run()
+
+    mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
+    mock_aws_api.create_blue_green_deployment.assert_not_called()
+    mock_logging.info.assert_called_once_with(
+        "Blue/Green Deployment test-rds Status: PROVISIONING"
+    )

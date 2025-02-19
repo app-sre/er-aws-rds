@@ -5,7 +5,7 @@ from boto3 import Session
 if TYPE_CHECKING:
     from mypy_boto3_rds import RDSClient
     from mypy_boto3_rds.type_defs import FilterTypeDef
-from mypy_boto3_rds.type_defs import DBInstanceTypeDef
+from mypy_boto3_rds.type_defs import BlueGreenDeploymentTypeDef, DBInstanceTypeDef
 
 from hooks.utils.models import CreateBlueGreenDeploymentParams
 
@@ -59,3 +59,15 @@ class AWSApi:
         """Create Blue/Green Deployment"""
         kwargs = params.model_dump(by_alias=True, exclude_none=True)
         self.rds_client.create_blue_green_deployment(**kwargs)
+
+    def get_blue_green_deployment(self, name: str) -> BlueGreenDeploymentTypeDef | None:
+        """Get Blue/Green Deployment"""
+        data = self.rds_client.describe_blue_green_deployments(
+            Filters=[
+                {
+                    "Name": "blue-green-deployment-name",
+                    "Values": [name],
+                }
+            ]
+        )
+        return data["BlueGreenDeployments"][0] if data["BlueGreenDeployments"] else None
