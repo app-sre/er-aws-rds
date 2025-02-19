@@ -1,5 +1,4 @@
 import pytest
-from cdktf import Testing
 from pydantic_core import ValidationError
 
 from er_aws_rds.errors import RDSLogicalReplicationError
@@ -10,8 +9,6 @@ from er_aws_rds.input import (
 )
 
 from .conftest import input_data
-
-Testing.__test__ = False
 
 
 def test_validate_parameter_rds_replication() -> None:

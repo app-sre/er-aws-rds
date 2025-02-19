@@ -11,15 +11,6 @@ wheels = [
 ]
 
 [[package]]
-name = "attrs"
-version = "24.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/48/c8/6260f8ccc11f0917360fc0da435c5c9c7504e3db174d5a12a1494887b045/attrs-24.3.0.tar.gz", hash = "sha256:8f5c07333d543103541ba7be0e2ce16eeee8130cb0b3f9238ab904ce1e85baff", size = 805984 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/aa/ab0f7891a01eeb2d2e338ae8fecbe57fcebea1a24dbb64d45801bfab481d/attrs-24.3.0-py3-none-any.whl", hash = "sha256:ac96cd038792094f438ad1f6ff80837353805ac950cd2aa0e0625ef19850c308", size = 63397 },
-]
-
-[[package]]
 name = "boto3"
 version = "1.35.99"
 source = { registry = "https://pypi.org/simple" }
@@ -35,15 +26,15 @@ wheels = [
 
 [[package]]
 name = "boto3-stubs-lite"
-version = "1.36.19"
+version = "1.36.22"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore-stubs" },
     { name = "types-s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/90/599d75a41a1d0bf52d0a87f6643c34530e6b41fb8f5ea6b44aaeafdedbfb/boto3_stubs_lite-1.36.19.tar.gz", hash = "sha256:f33b01bd3d652e932e8dcd2d902a607d68e5cf0b710d79361b9ec81acdefda51", size = 71281 }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/2f/affc51ed5742389db6476d3a20dc868a1e4e0aebb8c1b463a98b079cb264/boto3_stubs_lite-1.36.22.tar.gz", hash = "sha256:e9dbf985e506a7f8b9311f5f3eed5079a68c31e526d207c4bbd08e305886c02b", size = 71326 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/7f/a067757def0445f74ba026ad587703daafa92fb19cb916db8d435e796fd7/boto3_stubs_lite-1.36.19-py3-none-any.whl", hash = "sha256:a199e019f306f18ab87f45c0fcffa463daad47828868eb44066018c0d0520b31", size = 42263 },
+    { url = "https://files.pythonhosted.org/packages/9c/fa/97c5525d6a223c1dca2eb3af1503fc9a1e10e8ee8c61fbe525065c0cd32d/boto3_stubs_lite-1.36.22-py3-none-any.whl", hash = "sha256:12fb6f20952d73bdf06b0246638aa3e679649ca2084b5a0f17a7942d8c467ebd", size = 42261 },
 ]
 
 [package.optional-dependencies]
@@ -67,73 +58,14 @@ wheels = [
 
 [[package]]
 name = "botocore-stubs"
-version = "1.36.18"
+version = "1.36.22"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "types-awscrt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/95/ad/5c2231fbc891b88159918a6d2d5570f7b10353f7e5fa33c8cb878afe5aa2/botocore_stubs-1.36.18.tar.gz", hash = "sha256:6d21b2fdf375fab25c403fee63ee31b02fa72253709ce06460933a869160fd32", size = 41241 }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/cf/37dd8c91169efae5e1c6bced8eba6d5547d33be625ccdbd2a091ba959ac3/botocore_stubs-1.36.22.tar.gz", hash = "sha256:20d46e9639edd2eef37197bba0f9dbee77410ac00a9c4de627711c949c543454", size = 41312 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/6a/69fffe00911c9d23069462f214933a1385c14bbe6d1184bf0eac34cd1cc9/botocore_stubs-1.36.18-py3-none-any.whl", hash = "sha256:1dac8d9527a57a6f322e4db7533cb9247798791cbcc3d3ee847f354d68eca870", size = 64054 },
-]
-
-[[package]]
-name = "cattrs"
-version = "24.1.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/64/65/af6d57da2cb32c076319b7489ae0958f746949d407109e3ccf4d115f147c/cattrs-24.1.2.tar.gz", hash = "sha256:8028cfe1ff5382df59dd36474a86e02d817b06eaf8af84555441bac915d2ef85", size = 426462 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/d5/867e75361fc45f6de75fe277dd085627a9db5ebb511a87f27dc1396b5351/cattrs-24.1.2-py3-none-any.whl", hash = "sha256:67c7495b760168d931a10233f979b28dc04daf853b30752246f4f8471c6d68d0", size = 66446 },
-]
-
-[[package]]
-name = "cdktf"
-version = "0.20.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "constructs" },
-    { name = "jsii" },
-    { name = "publication" },
-    { name = "typeguard" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/f2/053265dd541018aebe4e1c0d6b7f777004fe5f052abccbcdda578669cda1/cdktf-0.20.10.tar.gz", hash = "sha256:0f4b649f09e0b93742511efb7a6ac76f3789f83b8b97710cd9feca79f455f523", size = 1548169 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d6/60/6ed9a4e7fe0451e4ad358fa85c749e250576bb1152dae8ae6d63caa78911/cdktf-0.20.10-py3-none-any.whl", hash = "sha256:09f6f469531d7bee566070f297ddf7e68d892f80de24c1335eea6d08b0e39628", size = 1548423 },
-]
-
-[[package]]
-name = "cdktf-cdktf-provider-aws"
-version = "19.19.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cdktf" },
-    { name = "constructs" },
-    { name = "jsii" },
-    { name = "publication" },
-    { name = "typeguard" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/ef/1f32297dcfa6a021cbce96cd461a16fd94d91148ef7b62037946186aef00/cdktf-cdktf-provider-aws-19.19.0.tar.gz", hash = "sha256:1df943640f452209134b289a8bec340fd83fc7c7de3a62b3832c4fd4aae998bc", size = 45250222 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/c3/5cee6c03a9e8964fa0e926dbd2f6cfba581090a46872ed0ed3bb2e0b1e80/cdktf_cdktf_provider_aws-19.19.0-py3-none-any.whl", hash = "sha256:ac052a959ab158a48f456878a9f4aa7a96958922472f03c46a86fe8354a82680", size = 47875534 },
-]
-
-[[package]]
-name = "cdktf-cdktf-provider-random"
-version = "11.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cdktf" },
-    { name = "constructs" },
-    { name = "jsii" },
-    { name = "publication" },
-    { name = "typeguard" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/93/13/1534bd8a76b2c5e70f912b39943a5620083a329c52672cb4cb21736edaa7/cdktf_cdktf_provider_random-11.0.3.tar.gz", hash = "sha256:3ae462ea67f5017774672960d1ec46d2635827be7cbc07e16d5465d0f87897e0", size = 98119 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/ed/d74a0cd295357792b21fb5bada3573c5fce300db7ac2fea8da8e294fdc0b/cdktf_cdktf_provider_random-11.0.3-py3-none-any.whl", hash = "sha256:b23c401bbb05153b70d43ba010b264a7bcfd3cc235ad7b90b9e1f1d8bdf77df6", size = 111954 },
+    { url = "https://files.pythonhosted.org/packages/d2/17/e3cc16f50e6daca565f56faa52cea3c0e148e9b053e0892bf0810ee906cf/botocore_stubs-1.36.22-py3-none-any.whl", hash = "sha256:4d76940ade5dca987bb66a5d9844a862fd09acfccf3fcb79d761e185e56145e5", size = 64109 },
 ]
 
 [[package]]
@@ -143,20 +75,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335 },
-]
-
-[[package]]
-name = "constructs"
-version = "10.4.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jsii" },
-    { name = "publication" },
-    { name = "typeguard" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/46/84/f608a0a71a05a476b2f1761ab8f3f776677d39f7996ecf1092a1ce741a7c/constructs-10.4.2.tar.gz", hash = "sha256:ce54724360fffe10bab27d8a081844eb81f5ace7d7c62c84b719c49f164d5307", size = 65434 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f2/d9/c5e7458f323bf063a9a54200742f2494e2ce3c7c6873e0ff80f88033c75f/constructs-10.4.2-py3-none-any.whl", hash = "sha256:1f0f59b004edebfde0f826340698b8c34611f57848139b7954904c61645f13c1", size = 63509 },
 ]
 
 [[package]]
@@ -184,9 +102,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
-    { name = "cdktf" },
-    { name = "cdktf-cdktf-provider-aws" },
-    { name = "cdktf-cdktf-provider-random" },
     { name = "external-resources-io" },
     { name = "mypy-boto3-rds" },
     { name = "pip" },
@@ -206,9 +121,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = "~=1.35.47" },
-    { name = "cdktf", specifier = "==0.20.10" },
-    { name = "cdktf-cdktf-provider-aws", specifier = "==19.19.0" },
-    { name = "cdktf-cdktf-provider-random", specifier = "==11.0.3" },
     { name = "external-resources-io", specifier = "~=0.4.0" },
     { name = "mypy-boto3-rds", specifier = "~=1.35.72" },
     { name = "pip", specifier = ">=25.0" },
@@ -238,15 +150,6 @@ wheels = [
 ]
 
 [[package]]
-name = "importlib-resources"
-version = "6.5.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cf/8c/f834fbf984f691b4f7ff60f50b514cc3de5cc08abfc3295564dd89c5e2e7/importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c", size = 44693 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec", size = 37461 },
-]
-
-[[package]]
 name = "iniconfig"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -262,24 +165,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/00/2a/e867e8531cf3e36b41201936b7fa7ba7b5702dbef42922193f05c8976cd6/jmespath-1.0.1.tar.gz", hash = "sha256:90261b206d6defd58fdd5e85f478bf633a2901798906be2ad389150c5c60edbe", size = 25843 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/31/b4/b9b800c45527aadd64d5b442f9b932b00648617eb5d63d2c7a6587b7cafc/jmespath-1.0.1-py3-none-any.whl", hash = "sha256:02e2e4cc71b5bcab88332eebf907519190dd9e6e82107fa7f83b1003a6252980", size = 20256 },
-]
-
-[[package]]
-name = "jsii"
-version = "1.106.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "cattrs" },
-    { name = "importlib-resources" },
-    { name = "publication" },
-    { name = "python-dateutil" },
-    { name = "typeguard" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/32/9c/e8c0bfef81e1496ab2b74e574e50bdc39574448213aa66f30acf24e819fb/jsii-1.106.0.tar.gz", hash = "sha256:c79c47899f53a7c3c4b20f80d3cd306628fe9ed1852eee970324c71eba1d974e", size = 578766 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/39/330e143538fac431881388702cdc637ce353a2ea1dd2a5ee734db1d5e60d/jsii-1.106.0-py3-none-any.whl", hash = "sha256:5a44d7c3a5a326fa3d9befdb3770b380057e0a61e3804e7c4907f70d76afaaa2", size = 554773 },
 ]
 
 [[package]]
@@ -353,15 +238,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/96/2d/02d4312c973c6050a18b314a5ad0b3210edb65a906f868e31c111dede4a6/pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1", size = 67955 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/5f/e351af9a41f866ac3f1fac4ca0613908d9a41741cfcf2228f4ad853b697d/pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669", size = 20556 },
-]
-
-[[package]]
-name = "publication"
-version = "0.0.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6b/8e/8c9fe7e32fdf9c386f83d59610cc819a25dadb874b5920f2d0ef7d35f46d/publication-0.0.3.tar.gz", hash = "sha256:68416a0de76dddcdd2930d1c8ef853a743cc96c82416c4e4d3b5d901c6276dc4", size = 5484 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f8/d3/6308debad7afcdb3ea5f50b4b3d852f41eb566a311fbcb4da23755a28155/publication-0.0.3-py2.py3-none-any.whl", hash = "sha256:0248885351febc11d8a1098d5c8e3ab2dabcf3e8c0c96db1e17ecd12b53afbe6", size = 7687 },
 ]
 
 [[package]]
@@ -496,15 +372,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050 },
-]
-
-[[package]]
-name = "typeguard"
-version = "2.13.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3a/38/c61bfcf62a7b572b5e9363a802ff92559cb427ee963048e1442e3aef7490/typeguard-2.13.3.tar.gz", hash = "sha256:00edaa8da3a133674796cf5ea87d9f4b4c367d77476e185e80251cc13dfbb8c4", size = 40604 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9a/bb/d43e5c75054e53efce310e79d63df0ac3f25e34c926be5dffb7d283fb2a8/typeguard-2.13.3-py3-none-any.whl", hash = "sha256:5e3e3be01e887e7eafae5af63d1f36c849aaa94e3a0112097312aabfa16284f1", size = 17605 },
 ]
 
 [[package]]
