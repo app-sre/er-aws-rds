@@ -17,7 +17,7 @@ logger.setLevel(logging.ERROR)
 def main() -> None:
     """Manage Blue/Green Deployment"""
     app_interface_input = parse_model(AppInterfaceInput, read_input_from_file())
-    aws_api = AWSApi(config_options={"region_name": app_interface_input.data.region})
+    aws_api = AWSApi(region_name=app_interface_input.data.region)
     dry_run = os.environ.get("DRY_RUN") == "True"
     manager = BlueGreenDeploymentManager(
         aws_api=aws_api, app_interface_input=app_interface_input, dry_run=dry_run

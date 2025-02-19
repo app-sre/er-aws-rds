@@ -41,9 +41,7 @@ def test_pre_hook_dry_run(
     with patch.dict(os.environ, {"DRY_RUN": "True"}):
         main()
 
-    mock_aws_api.assert_called_once_with(
-        config_options={"region_name": expected_model.data.region}
-    )
+    mock_aws_api.assert_called_once_with(region_name=expected_model.data.region)
     mock_blue_green_deployment_manager.assert_called_once_with(
         aws_api=mock_aws_api.return_value,
         app_interface_input=expected_model,
@@ -64,9 +62,7 @@ def test_pre_hook_non_dry_run(
     with patch.dict(os.environ, {"DRY_RUN": "False"}):
         main()
 
-    mock_aws_api.assert_called_once_with(
-        config_options={"region_name": expected_model.data.region}
-    )
+    mock_aws_api.assert_called_once_with(region_name=expected_model.data.region)
     mock_blue_green_deployment_manager.assert_called_once_with(
         aws_api=mock_aws_api.return_value,
         app_interface_input=expected_model,

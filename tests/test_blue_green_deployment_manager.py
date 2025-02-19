@@ -5,6 +5,7 @@ from unittest.mock import Mock, create_autospec, patch
 import pytest
 from hooks.utils.aws_api import AWSApi
 from hooks.utils.blue_green_deployment_manager import BlueGreenDeploymentManager
+from hooks.utils.models import CreateBlueGreenDeploymentParams
 
 from tests.conftest import input_object
 
@@ -48,7 +49,8 @@ def test_run_when_not_enabled(
     mock_aws_api: Mock,
     mock_logging: Mock,
     additional_data: dict,
-    dry_run: bool,  # noqa: FBT001
+    *,
+    dry_run: bool,
 ) -> None:
     """Test not enabled"""
     manager = BlueGreenDeploymentManager(
@@ -62,3 +64,107 @@ def test_run_when_not_enabled(
     mock_logging.info.assert_called_once_with(
         "Blue/Green Deployment not enabled, continue to normal flow."
     )
+
+
+BLUE_GREEN_DEPLOYMENT_ENABLED = {
+    "data": {
+        "blue_green_deployment": {
+            "enabled": True,
+            "switchover": False,
+            "delete": False,
+            "target": {
+                "engine_version": "15.7",
+                "instance_class": "db.t4g.micro",
+                "iops": 3000,
+                "parameter_group": {
+                    "name": "pg15",
+                    "family": "postgres15",
+                },
+                "allocated_storage": 20,
+                "storage_type": "gp3",
+                "storage_throughput": 125,
+            },
+        }
+    }
+}
+
+
+@pytest.mark.parametrize(
+    ("additional_data", "dry_run"),
+    [
+        (BLUE_GREEN_DEPLOYMENT_ENABLED, True),
+        (BLUE_GREEN_DEPLOYMENT_ENABLED, False),
+    ],
+)
+def test_run_when_create_blue_green_deployment_with_default_target(
+    mock_aws_api: Mock,
+    mock_logging: Mock,
+    additional_data: dict,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test create default"""
+    mock_aws_api.get_db_instance.return_value = {"DBInstanceArn": "some-arn"}
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(additional_data),
+        dry_run=dry_run,
+    )
+    expected_params = CreateBlueGreenDeploymentParams(
+        name="test-rds",
+        source_arn="some-arn",
+        allocated_storage=20,
+        engine_version="15.7",
+        instance_class="db.t4g.micro",
+        iops=3000,
+        parameter_group_name="test-rds-pg15",
+        storage_throughput=125,
+        storage_type="gp3",
+        tags={
+            "app": "external-resources-poc",
+            "cluster": "appint-ex-01",
+            "environment": "stage",
+            "managed_by_integration": "external_resources",
+            "namespace": "external-resources-poc",
+        },
+    )
+
+    manager.run()
+
+    mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
+    mock_logging.info.assert_called_once_with(
+        f"Action: CreateBlueGreenDeployment, {expected_params.model_dump_json()}"
+    )
+    if dry_run:
+        mock_aws_api.create_blue_green_deployment.assert_not_called()
+    else:
+        mock_aws_api.create_blue_green_deployment.assert_called_once_with(
+            expected_params
+        )
+
+
+@pytest.mark.parametrize(
+    ("additional_data", "dry_run"),
+    [
+        (BLUE_GREEN_DEPLOYMENT_ENABLED, True),
+        (BLUE_GREEN_DEPLOYMENT_ENABLED, False),
+    ],
+)
+def test_run_when_create_blue_green_deployment_when_rds_not_found(
+    mock_aws_api: Mock,
+    additional_data: dict,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test create default"""
+    mock_aws_api.get_db_instance.return_value = None
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(additional_data),
+        dry_run=dry_run,
+    )
+
+    with pytest.raises(ValueError, match="DB instance not found: test-rds"):
+        manager.run()
+
+    mock_aws_api.get_db_instance.assert_called_once_with("test-rds")

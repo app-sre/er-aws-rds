@@ -24,9 +24,7 @@ class RDSPlanValidator:
     def __init__(self, plan: Plan, app_interface_input: AppInterfaceInput) -> None:
         self.plan = plan
         self.input = app_interface_input
-        self.aws_api = AWSApi(
-            config_options={"region_name": app_interface_input.data.region}
-        )
+        self.aws_api = AWSApi(region_name=app_interface_input.data.region)
         self.errors: list[str] = []
 
     @property
