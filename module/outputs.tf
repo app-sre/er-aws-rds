@@ -1,22 +1,22 @@
-output "db_host" {
+output "__db_host" {
   value = aws_db_instance.this.address
 }
 
-output "db_port" {
+output "__db_port" {
   value = aws_db_instance.this.port
 }
 
-output "db_name" {
+output "__db_name" {
   value = coalesce(var.output_resource_db_name, aws_db_instance.this.db_name)
 }
 
 # Conditional CA Cert output
-output "db_ca_cert" {
+output "__db_ca_cert" {
   value     = var.ca_cert != null ? var.ca_cert : null
   sensitive = false
 }
 
-output "reset_password" {
+output "__reset_password" {
   value = var.reset_password != null && var.reset_password != "" ? var.reset_password : null
 }
 
@@ -33,12 +33,12 @@ data "terraform_remote_state" "replica_source" {
   }
 }
 
-output "db_user" {
+output "__db_user" {
   value     = var.replica_source == null ? aws_db_instance.this.username : data.terraform_remote_state.replica_source[0].outputs["db_user"]
   sensitive = true
 }
 
-output "db_password" {
+output "__db_password" {
   value     = var.replica_source == null ? aws_db_instance.this.password : data.terraform_remote_state.replica_source[0].outputs["db_password"]
   sensitive = true
 }
