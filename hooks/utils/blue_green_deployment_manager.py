@@ -30,16 +30,22 @@ class BlueGreenDeploymentManager:
             )
             return
 
-        instance = self.aws_api.get_db_instance(
-            self.app_interface_input.provision.identifier
-        )
+        identifier = self.app_interface_input.provision.identifier
+        instance = self.aws_api.get_db_instance(identifier)
         if instance is None:
             raise ValueError(
                 f"DB instance not found: {self.app_interface_input.provision.identifier}"
             )
 
+        bg = self.aws_api.get_blue_green_deployment(identifier)
+        if bg:
+            self.logger.info(
+                f"Blue/Green Deployment {identifier} Status: {bg['Status']}"
+            )
+            return
+
         params = CreateBlueGreenDeploymentParams(
-            name=self.app_interface_input.provision.identifier,
+            name=identifier,
             source_arn=instance["DBInstanceArn"],
             allocated_storage=config.target.allocated_storage,
             engine_version=config.target.engine_version,
