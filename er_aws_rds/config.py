@@ -22,3 +22,7 @@ def generate_tf_files() -> None:
     create_backend_tf_file(ai_input.provision)
     tf = TerraformModuleData(ai_input=ai_input)
     create_tf_vars_json(tf)
+
+
+if __name__ == "__main__":
+    generate_tf_files()

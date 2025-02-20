@@ -36,15 +36,10 @@ generate-tf-config = 'er_aws_rds.config:generate_tf_files'
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build.targets.sdist]
-only-include = ["er_aws_msk"]
-
 # Ruff configuration
 [tool.ruff]
 line-length = 88
 target-version = 'py311'
-src = ["er_aws_msk"]
-extend-exclude = [".gen"]
 fix = true
 
 [tool.ruff.lint]
@@ -93,7 +88,7 @@ known-first-party = ["er_aws_rds"]
 
 # Mypy configuration
 [tool.mypy]
-files = ["er_aws_rds", "tests"]
+files = ["er_aws_rds", "hooks", "tests"]
 enable_error_code = ["truthy-bool", "redundant-expr"]
 no_implicit_optional = true
 check_untyped_defs = true

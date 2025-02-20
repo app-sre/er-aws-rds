@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-
 import logging
-import logging.config
 import sys
 
 import semver
@@ -106,7 +104,7 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
 
     RuntimeEnvVars.check([RuntimeEnvVars.PLAN_FILE_JSON])
-    terraform_plan_json = RuntimeEnvVars.PLAN_FILE_JSON.get()
+    terraform_plan_json = RuntimeEnvVars.PLAN_FILE_JSON.get() or ""
 
     app_interface_input: AppInterfaceInput = parse_model(
         AppInterfaceInput,

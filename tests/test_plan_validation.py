@@ -1,4 +1,5 @@
 from external_resources_io.terraform import Action, Plan
+
 from hooks.post_plan import RDSPlanValidator
 
 from .conftest import input_object

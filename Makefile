@@ -4,7 +4,6 @@ CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo 
 format:
 	uv run ruff check
 	uv run ruff format
-	terraform fmt -check module/
 	terraform fmt module/
 
 .PHONY: image_tests

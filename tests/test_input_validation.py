@@ -43,10 +43,11 @@ def test_parameter_group_name() -> None:
     """Test correct parameter group names are set"""
     model = AppInterfaceInput.model_validate(input_data())
     assert model.data.parameter_group is not None
-    assert (
-        model.data.parameter_group.computed_pg_name
-        == f"{model.data.identifier}-{model.data.parameter_group.name}"
+    expected_parameter_group_name = (
+        f"{model.data.identifier}-{model.data.parameter_group.name}"
     )
+    assert model.data.parameter_group.computed_pg_name == expected_parameter_group_name
+    assert model.data.parameter_group_name == expected_parameter_group_name
 
 
 def test_parameter_group_name_without_pg_name() -> None:

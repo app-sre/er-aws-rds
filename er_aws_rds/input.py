@@ -249,12 +249,15 @@ class Rds(RdsAppInterface):
 
     @model_validator(mode="after")
     def parameter_groups(self) -> "Rds":
-        "Sets the right parameter group names. The instance identifier is used as prefix on each pg"
-        "This way each instance will have its own parameter group, withouth re-using them on multiple instances"
+        """
+        Sets the right parameter group names. The instance identifier is used as prefix on each pg.
+
+        This way each instance will have its own parameter group, without re-using them on multiple instances.
+        """
         if self.parameter_group:
-            self.parameter_group.computed_pg_name = (
-                f"{self.identifier}-{self.parameter_group.name or 'pg'}"
-            )
+            name = f"{self.identifier}-{self.parameter_group.name or 'pg'}"
+            self.parameter_group.computed_pg_name = name
+            self.parameter_group_name = name
 
         if self.old_parameter_group and not self.parameter_group:
             msg = "old_parameter_group must be used with parameter_group. old_parameter_group is only used for RDS major version upgrades"
