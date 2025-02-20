@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     RuntimeEnvVars.check([RuntimeEnvVars.TERRAFORM_CMD, RuntimeEnvVars.TF_VARS_FILE])
 
-    terraform_cmd = RuntimeEnvVars.TERRAFORM_CMD.get().split()
+    terraform_cmd = (RuntimeEnvVars.TERRAFORM_CMD.get() or "").split()
     terraform_vars_file = RuntimeEnvVars.TF_VARS_FILE.get()
 
     logger.info("Running Migration Process CDKTF -> Terraform")

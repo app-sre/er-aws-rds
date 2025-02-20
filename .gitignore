@@ -177,3 +177,5 @@ module/.terraform/
 module/.terraform.*
 module/backend.tf
 module/tfvars.json
+module/plan
+module/plan.json
