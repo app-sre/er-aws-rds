@@ -213,11 +213,11 @@ class Rds(RdsAppInterface):
         if self.replicate_source_db:
             msg = "Only one of replicate_source_db or replica_source can be defined"
             raise ValueError(msg)
-        if self.replica_source.region != self.region or self.db_subnet_group_name:
+        if self.replica_source.region != self.region:
             # Cross-region replication or different db_subnet_group_name.
             # The ARN must be set in the replicate_source_db attribute for these cases.
             # The ARN is resolved in the module using a Datasource.
-            # The Datasource required attribuets are fed with the replica_source variable.
+            # The Datasource required attributes are fed with the replica_source variable.
             if not self.db_subnet_group_name:
                 msg = "db_subnet_group_name must be defined for cross-region replicas"
                 raise ValueError(msg)
