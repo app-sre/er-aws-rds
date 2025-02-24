@@ -6,6 +6,7 @@ import semver
 from external_resources_io.input import parse_model, read_input_from_file
 from external_resources_io.terraform import (
     Action,
+    Change,
     Plan,
     ResourceChange,
     TerraformJsonPlanParser,
@@ -29,26 +30,54 @@ class RDSPlanValidator:
         self.errors: list[str] = []
 
     @property
-    def aws_db_instance_updates(self) -> list[ResourceChange]:
-        "Gets the plan updates"
+    def output_deletions(self) -> list[Change]:
         return [
             c
-            for c in self.plan.resource_changes
-            if c.type == "aws_db_instance"
-            and c.change
-            and Action.ActionUpdate in c.change.actions
+            for c in self.plan.output_changes.values()
+            if Action.ActionDelete in c.actions
         ]
 
     @property
-    def aws_db_instance_deletions(self) -> list[ResourceChange]:
-        "Gets the plan updates"
+    def output_creations(self) -> list[Change]:
+        return [
+            c
+            for c in self.plan.output_changes.values()
+            if Action.ActionCreate in c.actions
+        ]
+
+    @property
+    def resource_updates(self) -> list[ResourceChange]:
         return [
             c
             for c in self.plan.resource_changes
-            if c.type == "aws_db_instance"
-            and c.change
-            and Action.ActionDelete in c.change.actions
+            if c.change and Action.ActionUpdate in c.change.actions
         ]
+
+    @property
+    def resource_deletions(self) -> list[ResourceChange]:
+        return [
+            c
+            for c in self.plan.resource_changes
+            if c.change and Action.ActionDelete in c.change.actions
+        ]
+
+    @property
+    def resource_creations(self) -> list[ResourceChange]:
+        return [
+            c
+            for c in self.plan.resource_changes
+            if c.change and Action.ActionCreate in c.change.actions
+        ]
+
+    @property
+    def aws_db_instance_updates(self) -> list[ResourceChange]:
+        "Gets the RDS isntance updates"
+        return [c for c in self.resource_updates if c.type == "aws_db_instance"]
+
+    @property
+    def aws_db_instance_deletions(self) -> list[ResourceChange]:
+        "Gets the RDS instance deletions"
+        return [c for c in self.resource_deletions if c.type == "aws_db_instance"]
 
     def _validate_major_version_upgrade(self) -> None:
         for u in self.aws_db_instance_updates:
@@ -92,10 +121,18 @@ class RDSPlanValidator:
                     "Deletion protection cannot be enabled on destroy. Disable deletion_protection first to remove the instance"
                 )
 
-    def validate(self) -> bool:
+    def _validate_resource_renaming(self) -> None:
+        if len(self.resource_creations) != len(self.resource_deletions):
+            self.errors.append("Resources Creations and Deletions mismatch")
+        if len(self.output_creations) != len(self.output_deletions):
+            self.errors.append("Outputs Creations and Deletions mismatch")
+
+    def validate(self, *, exclude_deletion_protection_test: bool = False) -> bool:
         """Validate method"""
         self._validate_major_version_upgrade()
-        self._validate_deletion_protection_not_enabled_on_destroy()
+        if not exclude_deletion_protection_test:
+            self._validate_deletion_protection_not_enabled_on_destroy()
+        self._validate_resource_renaming()
         return not self.errors
 
 
@@ -114,7 +151,9 @@ if __name__ == "__main__":
     logger.info("Running RDS terraform plan validation")
     parser = TerraformJsonPlanParser(plan_path=terraform_plan_json)
     validator = RDSPlanValidator(parser.plan, app_interface_input)
-    if not validator.validate():
+    # Excluding this test temporary to migrate from CDKTF
+    # Remove this once all resources have been migrated to Terraform
+    if not validator.validate(exclude_deletion_protection_test=True):
         logger.error(validator.errors)
         sys.exit(1)
     else:

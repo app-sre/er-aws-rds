@@ -43,10 +43,8 @@ def test_parameter_group_name() -> None:
     """Test correct parameter group names are set"""
     model = AppInterfaceInput.model_validate(input_data())
     assert model.data.parameter_group is not None
-    expected_parameter_group_name = (
-        f"{model.data.identifier}-{model.data.parameter_group.name}"
-    )
-    assert model.data.parameter_group.computed_pg_name == expected_parameter_group_name
+    expected_parameter_group_name = f"{model.data.identifier}-test-pg"
+    assert model.data.parameter_group.name == expected_parameter_group_name
     assert model.data.parameter_group_name == expected_parameter_group_name
 
 
@@ -55,7 +53,7 @@ def test_parameter_group_name_without_pg_name() -> None:
     mod_input = input_data({"data": {"parameter_group": {"name": None}}})
     model = AppInterfaceInput.model_validate(mod_input)
     assert model.data.parameter_group is not None
-    assert model.data.parameter_group.computed_pg_name == f"{model.data.identifier}-pg"
+    assert model.data.parameter_group.name == f"{model.data.identifier}-pg"
 
 
 def test_parameter_group_name_along_old_parameter_group_1() -> None:
@@ -73,17 +71,11 @@ def test_parameter_group_name_along_old_parameter_group_1() -> None:
     model = AppInterfaceInput.model_validate(mod_input)
     assert model.data.parameter_group is not None
     assert model.data.old_parameter_group is not None
-    assert (
-        model.data.parameter_group.computed_pg_name
-        == f"{model.data.identifier}-{model.data.parameter_group.name}"
-    )
-    assert (
-        model.data.old_parameter_group.computed_pg_name
-        == f"{model.data.identifier}-{model.data.old_parameter_group.name}"
-    )
+    assert model.data.parameter_group.name == f"{model.data.identifier}-test-pg"
+    assert model.data.old_parameter_group.name == f"{model.data.identifier}-postgres-16"
 
 
-def test_parameter_group_name_along_old_parameter_group_without_names() -> None:
+def test_parameter_group_along_old_parameter_group_without_names() -> None:
     """Test correct parameter group names are set"""
     mod_input = input_data({
         "data": {

@@ -7,7 +7,6 @@ from pydantic import (
     ConfigDict,
     Field,
     computed_field,
-    field_serializer,
     field_validator,
     model_validator,
 )
@@ -67,13 +66,6 @@ class ParameterGroup(BaseModel):
     description: str | None = None
     parameters: list[Parameter] | None = Field(default=None)
 
-    @field_serializer("name")
-    def serialize_name(self, _: str) -> str:
-        return self.computed_pg_name
-
-    # This attribute is set by a model_validator in the RDS class
-    computed_pg_name: str = Field(default="", exclude=True)
-
 
 class ReplicaSource(BaseModel):
     "AppInterface ReplicaSource"
@@ -88,6 +80,10 @@ class DBInstanceTimeouts(BaseModel):
     create: str | None = None
     delete: str | None = None
     update: str | None = None
+
+
+class BlueGreenUpdate(BaseModel):
+    enabled: bool = False
 
 
 class RdsAppInterface(BaseModel):
@@ -120,7 +116,6 @@ class RdsAppInterface(BaseModel):
     output_resource_name: str | None = Field(default=None, exclude=True)
     # output_prefix is not necessary since now each resources has it own state.
     output_prefix: str = Field(exclude=True)
-
     tags: dict[str, Any] | None = Field(default=None, exclude=True)
     default_tags: Sequence[dict[str, Any]] | None = Field(default=None, exclude=True)
 
@@ -156,6 +151,7 @@ class Rds(RdsAppInterface):
     password: str | None = None
     parameter_group_name: str | None = None
     timeouts: DBInstanceTimeouts | None = None
+    blue_green_update: BlueGreenUpdate | None = None
 
     @property
     def enhanced_monitoring_role_name(self) -> str:
@@ -227,7 +223,7 @@ class Rds(RdsAppInterface):
         else:
             # Same-region replication. The instance identifier must be supplied int the replicate_source_db attr.
             self.replicate_source_db = self.replica_source.identifier
-            self.replica_source = None
+            self.db_subnet_group_name = None
 
         # No backup for replicas
         self.backup_retention_period = 0
@@ -256,7 +252,7 @@ class Rds(RdsAppInterface):
         """
         if self.parameter_group:
             name = f"{self.identifier}-{self.parameter_group.name or 'pg'}"
-            self.parameter_group.computed_pg_name = name
+            self.parameter_group.name = name
             self.parameter_group_name = name
 
         if self.old_parameter_group and not self.parameter_group:
@@ -264,7 +260,7 @@ class Rds(RdsAppInterface):
             raise ValueError(msg)
 
         if self.old_parameter_group and self.parameter_group:
-            self.old_parameter_group.computed_pg_name = (
+            self.old_parameter_group.name = (
                 f"{self.identifier}-{self.old_parameter_group.name or 'pg'}"
             )
 
@@ -309,6 +305,18 @@ class Rds(RdsAppInterface):
         """Remove alias prefix from kms_key_id"""
         if self.kms_key_id:
             self.kms_key_id = self.kms_key_id.removeprefix("alias/")
+        return self
+
+    @model_validator(mode="after")
+    def blue_green_update_requirements(self) -> "Rds":
+        if (
+            self.blue_green_update
+            and self.blue_green_update.enabled
+            and self.snapshot_identifier
+        ):
+            raise ValueError(
+                "Blue/Green updates can not be enabled when snapshot_identifier is set"
+            )
         return self
 
 
@@ -360,6 +368,12 @@ class TerraformModuleData(BaseModel):
     def replica_source(self) -> ReplicaSource | None:
         """ReplicaSource terraform variable"""
         return self.ai_input.data.replica_source
+
+    @computed_field
+    def ca_cert(self) -> str | None:
+        if self.ai_input.data.ca_cert:
+            return self.ai_input.data.ca_cert.to_vault_ref()
+        return None
 
     @computed_field
     def tags(self) -> dict[str, Any] | None:

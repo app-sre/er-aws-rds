@@ -27,6 +27,7 @@ def test_validate_deletion_protection_not_enabled_on_destroy() -> None:
 
     validator = RDSPlanValidator(plan, input_object())
     validator.validate()
-    assert validator.errors == [
+    assert (
         "Deletion protection cannot be enabled on destroy. Disable deletion_protection first to remove the instance"
-    ]
+        in validator.errors
+    )
