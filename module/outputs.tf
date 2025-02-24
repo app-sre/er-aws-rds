@@ -26,8 +26,8 @@ data "terraform_remote_state" "replica_source" {
   backend = "s3"
 
   config = {
-    bucket  = var.provision.tf_state_bucket
-    region  = var.provision.tf_state_region
+    bucket  = var.provision.module_provision_data.tf_state_bucket
+    region  = var.provision.module_provision_data.tf_state_region
     key     = "aws/${var.provision.provisioner}/rds/${var.replica_source.identifier}/terraform.tfstate"
     profile = "external-resources-state"
   }
