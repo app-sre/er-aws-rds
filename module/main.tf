@@ -128,7 +128,7 @@ resource "aws_db_instance" "this" {
   multi_az                              = try(var.rds_instance.multi_az, null)
   network_type                          = try(var.rds_instance.network_type, null)
   option_group_name                     = try(var.rds_instance.option_group_name, null)
-  parameter_group_name                  = try(var.rds_instance.parameter_group_name, null)
+  parameter_group_name                  = try(var.rds_instance.parameter_group_name, null) == null ? null : aws_db_parameter_group.this[var.rds_instance.parameter_group_name].name
   password                              = try(random_password.this[0].result, null)
   performance_insights_enabled          = try(var.rds_instance.performance_insights_enabled, null)
   performance_insights_kms_key_id       = try(var.rds_instance.performance_insights_kms_key_id, null)
