@@ -37,7 +37,7 @@ def input_data(additional_data: dict[str, Any] | None = None) -> dict:
             "enhanced_monitoring": True,
             "monitoring_interval": 60,
             "parameter_group": {
-                "name": "postgres-14",
+                "name": "test-pg",
                 "family": "postgres14",
                 "description": "Parameter Group for PostgreSQL 14",
                 "parameters": [

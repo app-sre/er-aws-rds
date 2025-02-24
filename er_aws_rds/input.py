@@ -7,7 +7,6 @@ from pydantic import (
     ConfigDict,
     Field,
     computed_field,
-    field_serializer,
     field_validator,
     model_validator,
 )
@@ -66,13 +65,6 @@ class ParameterGroup(BaseModel):
     name: str | None = None
     description: str | None = None
     parameters: list[Parameter] | None = Field(default=None)
-
-    @field_serializer("name")
-    def serialize_name(self, _: str) -> str:
-        return self.computed_pg_name
-
-    # This attribute is set by a model_validator in the RDS class
-    computed_pg_name: str = Field(default="", exclude=True)
 
 
 class ReplicaSource(BaseModel):
@@ -256,7 +248,7 @@ class Rds(RdsAppInterface):
         """
         if self.parameter_group:
             name = f"{self.identifier}-{self.parameter_group.name or 'pg'}"
-            self.parameter_group.computed_pg_name = name
+            self.parameter_group.name = name
             self.parameter_group_name = name
 
         if self.old_parameter_group and not self.parameter_group:
@@ -264,7 +256,7 @@ class Rds(RdsAppInterface):
             raise ValueError(msg)
 
         if self.old_parameter_group and self.parameter_group:
-            self.old_parameter_group.computed_pg_name = (
+            self.old_parameter_group.name = (
                 f"{self.identifier}-{self.old_parameter_group.name or 'pg'}"
             )
 
