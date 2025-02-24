@@ -127,10 +127,11 @@ class RDSPlanValidator:
         if len(self.output_creations) != len(self.output_deletions):
             self.errors.append("Outputs Creations and Deletions mismatch")
 
-    def validate(self) -> bool:
+    def validate(self, *, exclude_deletion_protection_test: bool = False) -> bool:
         """Validate method"""
         self._validate_major_version_upgrade()
-        # self._validate_deletion_protection_not_enabled_on_destroy()
+        if not exclude_deletion_protection_test:
+            self._validate_deletion_protection_not_enabled_on_destroy()
         self._validate_resource_renaming()
         return not self.errors
 
@@ -150,7 +151,9 @@ if __name__ == "__main__":
     logger.info("Running RDS terraform plan validation")
     parser = TerraformJsonPlanParser(plan_path=terraform_plan_json)
     validator = RDSPlanValidator(parser.plan, app_interface_input)
-    if not validator.validate():
+    # Excluding this test temporary to migrate from CDKTF
+    # Remove this once all resources have been migrated to Terraform
+    if not validator.validate(exclude_deletion_protection_test=True):
         logger.error(validator.errors)
         sys.exit(1)
     else:
