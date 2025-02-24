@@ -25,7 +25,7 @@ resource "aws_iam_role" "this" {
       {
         Effect = "Allow"
         Principal = {
-          Service = "rds.amazonaws.com"
+          Service = "monitoring.rds.amazonaws.com"
         }
         Action = "sts:AssumeRole"
       }
