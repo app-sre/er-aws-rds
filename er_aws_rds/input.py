@@ -82,6 +82,10 @@ class DBInstanceTimeouts(BaseModel):
     update: str | None = None
 
 
+class BlueGreenUpdate(BaseModel):
+    enabled: bool = False
+
+
 class RdsAppInterface(BaseModel):
     """AppInterface Input parameters
 
@@ -148,6 +152,7 @@ class Rds(RdsAppInterface):
     password: str | None = None
     parameter_group_name: str | None = None
     timeouts: DBInstanceTimeouts | None = None
+    blue_green_update: BlueGreenUpdate | None = None
 
     @property
     def enhanced_monitoring_role_name(self) -> str:
@@ -219,7 +224,7 @@ class Rds(RdsAppInterface):
         else:
             # Same-region replication. The instance identifier must be supplied int the replicate_source_db attr.
             self.replicate_source_db = self.replica_source.identifier
-            self.replica_source = None
+            self.db_subnet_group_name = None
 
         # No backup for replicas
         self.backup_retention_period = 0
@@ -301,6 +306,18 @@ class Rds(RdsAppInterface):
         """Remove alias prefix from kms_key_id"""
         if self.kms_key_id:
             self.kms_key_id = self.kms_key_id.removeprefix("alias/")
+        return self
+
+    @model_validator(mode="after")
+    def blue_green_update_requirements(self) -> "Rds":
+        if (
+            self.blue_green_update
+            and self.blue_green_update.enabled
+            and self.snapshot_identifier
+        ):
+            raise ValueError(
+                "Blue/Green updates can not be enabled when snapshot_identifier is set"
+            )
         return self
 
 
