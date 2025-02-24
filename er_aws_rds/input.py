@@ -116,7 +116,6 @@ class RdsAppInterface(BaseModel):
     output_resource_name: str | None = Field(default=None, exclude=True)
     # output_prefix is not necessary since now each resources has it own state.
     output_prefix: str = Field(exclude=True)
-
     tags: dict[str, Any] | None = Field(default=None, exclude=True)
     default_tags: Sequence[dict[str, Any]] | None = Field(default=None, exclude=True)
 
@@ -369,6 +368,12 @@ class TerraformModuleData(BaseModel):
     def replica_source(self) -> ReplicaSource | None:
         """ReplicaSource terraform variable"""
         return self.ai_input.data.replica_source
+
+    @computed_field
+    def ca_cert(self) -> str | None:
+        if self.ai_input.data.ca_cert:
+            return self.ai_input.data.ca_cert.to_vault_ref()
+        return None
 
     @computed_field
     def tags(self) -> dict[str, Any] | None:
