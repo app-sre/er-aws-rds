@@ -30,18 +30,27 @@ class BlueGreenDeploymentManager:
             )
             return
 
-        identifier = self.app_interface_input.provision.identifier
-        instance = self.aws_api.get_db_instance(identifier)
+        rds_identifier = self.app_interface_input.provision.identifier
+        instance = self.aws_api.get_db_instance(rds_identifier)
         if instance is None:
             raise ValueError(
                 f"DB instance not found: {self.app_interface_input.provision.identifier}"
             )
 
-        bg = self.aws_api.get_blue_green_deployment(identifier)
+        bg_name = rds_identifier
+        bg = self.aws_api.get_blue_green_deployment(bg_name)
         if bg:
-            self.logger.info(
-                f"Blue/Green Deployment {identifier} Status: {bg['Status']}"
-            )
+            if config.switchover and bg["Status"] == "AVAILABLE":
+                bg_identifier = bg["BlueGreenDeploymentIdentifier"]
+                self.logger.info(
+                    f"Action: SwitchoverBlueGreenDeployment, name: {bg_name}, identifier: {bg_identifier}"
+                )
+                if not self.dry_run:
+                    self.aws_api.switchover_blue_green_deployment(bg_identifier)
+            else:
+                self.logger.info(
+                    f"Blue/Green Deployment {rds_identifier} Status: {bg['Status']}"
+                )
             return
 
         target = config.target or BlueGreenDeploymentTarget()
@@ -57,7 +66,7 @@ class BlueGreenDeploymentManager:
             )
 
         params = CreateBlueGreenDeploymentParams(
-            name=identifier,
+            name=rds_identifier,
             source_arn=instance["DBInstanceArn"],
             allocated_storage=target.allocated_storage,
             engine_version=target.engine_version,
