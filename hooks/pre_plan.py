@@ -10,7 +10,9 @@ from hooks.utils.logger import setup_logging
 from hooks.utils.runtime import is_dry_run
 
 
-def run_process(cmd: Iterable[str], *, dry_run: bool = True) -> CompletedProcess | None:
+def run_process(
+    cmd: Iterable[str], *, dry_run: bool = True, check: bool = True
+) -> CompletedProcess | None:
     """Runs a subprocess"""
     if dry_run:
         logger.debug(f"cmd: {' '.join(cmd)}")
@@ -21,7 +23,7 @@ def run_process(cmd: Iterable[str], *, dry_run: bool = True) -> CompletedProcess
             list(cmd),
             capture_output=True,
             text=True,
-            check=True,
+            check=check,
         )
     except subprocess.CalledProcessError as e:
         logger.exception(e.stderr)  # Prints error output
@@ -77,8 +79,8 @@ if __name__ == "__main__":
     terraform_vars_file = RuntimeEnvVars.TF_VARS_FILE.get()
 
     logger.info("Running Migration Process CDKTF -> Terraform")
-    result = run_process([*terraform_cmd, "state", "list"], dry_run=False)
-    if result:
+    result = run_process([*terraform_cmd, "state", "list"], dry_run=False, check=False)
+    if result and result.returncode == 0:
         state_items = result.stdout.split()
         count = mv_state_items(state_items)
         if count > 0:
