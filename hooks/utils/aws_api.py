@@ -80,3 +80,9 @@ class AWSApi:
             ]
         )
         return data["BlueGreenDeployments"][0] if data["BlueGreenDeployments"] else None
+
+    def switchover_blue_green_deployment(self, identifier: str) -> None:
+        """Switchover Blue/Green Deployment"""
+        self.rds_client.switchover_blue_green_deployment(
+            BlueGreenDeploymentIdentifier=identifier
+        )
