@@ -40,8 +40,14 @@ resource "aws_iam_role_policy_attachment" "this" {
   policy_arn = "arn:${data.aws_partition.this.partition}:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
 }
 
+locals {
+  parameter_groups        = { for pg in try(var.parameter_groups, []) : pg.name => pg }
+  parameter_group_name    = try(var.rds_instance.parameter_group_name, null)
+  parameter_group_managed = local.parameter_group_name != null ? contains(keys(local.parameter_groups), local.parameter_group_name) : false
+}
+
 resource "aws_db_parameter_group" "this" {
-  for_each    = { for pg in try(var.parameter_groups, []) : pg.name => pg }
+  for_each    = local.parameter_groups
   name        = each.value.name
   family      = each.value.family
   description = each.value.description
@@ -128,7 +134,7 @@ resource "aws_db_instance" "this" {
   multi_az                              = try(var.rds_instance.multi_az, null)
   network_type                          = try(var.rds_instance.network_type, null)
   option_group_name                     = try(var.rds_instance.option_group_name, null)
-  parameter_group_name                  = try(var.rds_instance.parameter_group_name, null)
+  parameter_group_name                  = local.parameter_group_managed ? aws_db_parameter_group.this[local.parameter_group_name].name : local.parameter_group_name
   password                              = try(random_password.this[0].result, null)
   performance_insights_enabled          = try(var.rds_instance.performance_insights_enabled, null)
   performance_insights_kms_key_id       = try(var.rds_instance.performance_insights_kms_key_id, null)
