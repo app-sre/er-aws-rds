@@ -155,3 +155,34 @@ def test_get_blue_green_deployment_when_not_found(mock_rds_client: Mock) -> None
     result = aws_api.get_blue_green_deployment("name")
 
     assert result is None
+
+
+def test_get_db_parameter_group(mock_rds_client: Mock) -> None:
+    """Test get_db_parameter_group"""
+    aws_api = AWSApi()
+    expected_result = {"DBParameterGroupName": "name"}
+    mock_rds_client.describe_db_parameter_groups.return_value = {
+        "DBParameterGroups": [expected_result]
+    }
+
+    result = aws_api.get_db_parameter_group("name")
+
+    assert result == expected_result
+    mock_rds_client.describe_db_parameter_groups.assert_called_once_with(
+        DBParameterGroupName="name"
+    )
+
+
+def test_get_db_parameter_group_when_not_found(mock_rds_client: Mock) -> None:
+    """Test get_db_parameter_group"""
+    aws_api = AWSApi()
+    mock_rds_client.describe_db_parameter_groups.return_value = {
+        "DBParameterGroups": []
+    }
+
+    result = aws_api.get_db_parameter_group("name")
+
+    assert result is None
+    mock_rds_client.describe_db_parameter_groups.assert_called_once_with(
+        DBParameterGroupName="name"
+    )

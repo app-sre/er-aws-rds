@@ -48,6 +48,14 @@ class BlueGreenDeploymentManager:
         parameter_group_name = (
             target.parameter_group.name if target.parameter_group else None
         )
+        if (
+            parameter_group_name
+            and self.aws_api.get_db_parameter_group(parameter_group_name) is None
+        ):
+            raise ValueError(
+                f"Target Parameter Group not found: {parameter_group_name}"
+            )
+
         params = CreateBlueGreenDeploymentParams(
             name=identifier,
             source_arn=instance["DBInstanceArn"],

@@ -204,3 +204,36 @@ def test_run_when_create_blue_green_deployment_when_already_created(
     mock_logging.info.assert_called_once_with(
         "Blue/Green Deployment test-rds Status: PROVISIONING"
     )
+
+
+@pytest.mark.parametrize(
+    ("additional_data", "dry_run"),
+    [
+        (BLUE_GREEN_DEPLOYMENT_ENABLED, True),
+        (BLUE_GREEN_DEPLOYMENT_ENABLED, False),
+    ],
+)
+def test_run_when_create_blue_green_deployment_with_parameter_group_not_found(
+    mock_aws_api: Mock,
+    additional_data: dict,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test create when parameter group not found"""
+    mock_aws_api.get_db_instance.return_value = {"DBInstanceArn": "some-arn"}
+    mock_aws_api.get_blue_green_deployment.return_value = None
+    mock_aws_api.get_db_parameter_group.return_value = None
+
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(additional_data),
+        dry_run=dry_run,
+    )
+
+    with pytest.raises(
+        ValueError, match="Target Parameter Group not found: test-rds-pg15"
+    ):
+        manager.run()
+
+    mock_aws_api.get_db_parameter_group.assert_called_once_with("test-rds-pg15")
+    mock_aws_api.create_blue_green_deployment.assert_not_called()
