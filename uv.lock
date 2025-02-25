@@ -27,15 +27,15 @@ wheels = [
 
 [[package]]
 name = "boto3-stubs-lite"
-version = "1.36.26"
+version = "1.37.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore-stubs" },
     { name = "types-s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/af/cf/600524fdb055031c2990f6674a99874c43e2647a9fd7fea2153e39cfb5ab/boto3_stubs_lite-1.36.26.tar.gz", hash = "sha256:125d4c455f37faac0d43d4410366e67d534ce71e49d485f99d5a14889b318828", size = 71293 }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/35/511f9a6ca8142b574073dcc0a77246a44c1e07c60ce84af3d626e2c25271/boto3_stubs_lite-1.37.0.tar.gz", hash = "sha256:fb7fa7c1f49ee4ae595a45b73e1c5b9f8ae95555c4609778210ce7acaf0cc508", size = 71178 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/a7/3df3bd415e08520febfc28b5fdcf9d3795511b1644e2671cb0031d74f738/boto3_stubs_lite-1.36.26-py3-none-any.whl", hash = "sha256:5fcfd8186ce8166b856e3ff7d638fdef70839e4486e9250d2491eff320fa6581", size = 42261 },
+    { url = "https://files.pythonhosted.org/packages/c4/0e/a799d62ee33de95278b8ef061bc92d59f28eb8114200b7673cdc6a42ce3a/boto3_stubs_lite-1.37.0-py3-none-any.whl", hash = "sha256:5196f264f810551b562f829c11bd3e6a4813262ba62e3e00dbd25d2110c7f2e6", size = 42197 },
 ]
 
 [package.optional-dependencies]
@@ -189,11 +189,11 @@ wheels = [
 
 [[package]]
 name = "mypy-boto3-ec2"
-version = "1.36.18"
+version = "1.37.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8d/4c/fb035c8faf82acd8c83f71bf3da5b7126f5e95ae3d628e1de0da66a54f6c/mypy_boto3_ec2-1.36.18.tar.gz", hash = "sha256:f7e42de2ae3d388d876989b06cf1a62dd1896fdb61d7dd87cb70ba196d29dbe1", size = 386508 }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/9a/235849c716de056f5c13b74342141fd657b9ff3f82b0423f4609cdbc5c2e/mypy_boto3_ec2-1.37.0.tar.gz", hash = "sha256:df2d70dfee067c332489148d6a429fcd7f7122405f4e9c9205f163b3dbb59c5a", size = 386501 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/65/9c/7d2113c8839ecc6505a097086fc4583897fbd688f64eeb834f06346567d1/mypy_boto3_ec2-1.36.18-py3-none-any.whl", hash = "sha256:7357116a10c10942a5cc702a202ed2b2eec165429226bea516afca897bf25eb5", size = 376313 },
+    { url = "https://files.pythonhosted.org/packages/1a/f5/485103baf8e41a1fb7073e655bb4fe0d6a7beb450fd42111b2a6b7763e9a/mypy_boto3_ec2-1.37.0-py3-none-any.whl", hash = "sha256:a0b78d12618d8a163ef94ccbfefc0ee62df261be7e1d14df98a21a1d723b502b", size = 376315 },
 ]
 
 [[package]]
