@@ -5,7 +5,11 @@ from boto3 import Session
 if TYPE_CHECKING:
     from mypy_boto3_rds import RDSClient
     from mypy_boto3_rds.type_defs import FilterTypeDef
-from mypy_boto3_rds.type_defs import BlueGreenDeploymentTypeDef, DBInstanceTypeDef
+from mypy_boto3_rds.type_defs import (
+    BlueGreenDeploymentTypeDef,
+    DBInstanceTypeDef,
+    DBParameterGroupTypeDef,
+)
 
 from hooks.utils.models import CreateBlueGreenDeploymentParams
 
@@ -47,6 +51,11 @@ class AWSApi:
         ]
         resp = self.rds_client.describe_db_parameter_groups(Filters=filters)
         return {group["DBParameterGroupName"] for group in resp["DBParameterGroups"]}
+
+    def get_db_parameter_group(self, name: str) -> DBParameterGroupTypeDef | None:
+        """Get DB parameter group info"""
+        data = self.rds_client.describe_db_parameter_groups(DBParameterGroupName=name)
+        return data["DBParameterGroups"][0] if data["DBParameterGroups"] else None
 
     def get_db_instance(self, identifier: str) -> DBInstanceTypeDef | None:
         """Get DB instance info"""
