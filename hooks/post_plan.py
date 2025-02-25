@@ -122,10 +122,16 @@ class RDSPlanValidator:
                 )
 
     def _validate_resource_renaming(self) -> None:
-        if len(self.resource_creations) != len(self.resource_deletions):
-            self.errors.append("Resources Creations and Deletions mismatch")
-        if len(self.output_creations) != len(self.output_deletions):
-            self.errors.append("Outputs Creations and Deletions mismatch")
+        # is it a rename?
+        if (
+            len(self.resource_deletions) != 0
+            and len(self.resource_creations) != 0
+            and any([
+                (len(self.resource_creations) != len(self.resource_deletions)),
+                (len(self.output_creations) != len(self.output_deletions)),
+            ])
+        ):
+            self.errors.append("Deletions and Creations mismatch")
 
     def validate(self, *, exclude_deletion_protection_test: bool = False) -> bool:
         """Validate method"""
