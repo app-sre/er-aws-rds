@@ -272,12 +272,6 @@ def test_run_when_switchover(
         "BlueGreenDeploymentIdentifier": "some-bg-id",
         "Status": "AVAILABLE",
     }
-    mock_aws_api.switchover_blue_green_deployment.return_value = {
-        "BlueGreenDeployment": {
-            "BlueGreenDeploymentIdentifier": "some-bg-id",
-            "Status": "SWITCHING",
-        }
-    }
     manager = BlueGreenDeploymentManager(
         aws_api=mock_aws_api,
         app_interface_input=input_object(additional_data),
@@ -463,4 +457,59 @@ def test_run_when_delete_after_switchover_and_source_deleted(
     else:
         mock_aws_api.delete_blue_green_deployment.assert_called_once_with(
             "some-bg-id"
+        )
+
+
+BLUE_GREEN_DEPLOYMENT_DELETE_WITHOUT_SWITCHOVER = {
+    "data": {
+        "blue_green_deployment": {
+            "enabled": True,
+            "switchover": False,
+            "delete": True,
+        }
+    }
+}
+
+
+@pytest.mark.parametrize(
+    ("additional_data", "dry_run"),
+    [
+        (BLUE_GREEN_DEPLOYMENT_DELETE_WITHOUT_SWITCHOVER, True),
+        (BLUE_GREEN_DEPLOYMENT_DELETE_WITHOUT_SWITCHOVER, False),
+    ],
+)
+def test_run_when_delete_without_switchover(
+    mock_aws_api: Mock,
+    mock_logging: Mock,
+    additional_data: dict,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test delete without switchover"""
+    mock_aws_api.get_db_instance.return_value = {"DBInstanceArn": "some-arn"}
+    mock_aws_api.get_blue_green_deployment.return_value = {
+        "BlueGreenDeploymentName": "test-rds",
+        "BlueGreenDeploymentIdentifier": "some-bg-id",
+        "Status": "AVAILABLE",
+    }
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(additional_data),
+        dry_run=dry_run,
+    )
+
+    manager.run()
+
+    mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
+    mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
+    mock_logging.info.assert_called_once_with(
+        "Action: DeleteBlueGreenDeployment, name: test-rds, identifier: some-bg-id"
+    )
+    mock_aws_api.delete_db_instance.assert_not_called()
+    if dry_run:
+        mock_aws_api.delete_blue_green_deployment.assert_not_called()
+    else:
+        mock_aws_api.delete_blue_green_deployment.assert_called_once_with(
+            "some-bg-id",
+            delete_target=True,
         )
