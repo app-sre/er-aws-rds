@@ -5,6 +5,7 @@
 - HCL version release.
 - Bump external-resources-io
 - Bump er-terraform-base image
+- Improved verssion validations.
 
 ## 0.4.x
 

@@ -20,6 +20,16 @@ class AWSApi:
         """Gets a boto RDS client"""
         return self.session.client("rds", config=self.config)
 
+    def is_rds_engine_version_available(self, engine: str, version: str) -> bool:
+        """Gets the available versions for an Rds engine"""
+        data = (
+            self.get_rds_client()
+            .describe_db_engine_versions(Engine=engine, EngineVersion=version)
+            .get("DBEngineVersions", [])
+        )
+
+        return len(data) == 1 and data[0].get("EngineVersion") == version
+
     def get_rds_valid_update_versions(self, engine: str, version: str) -> set[str]:
         """Gets the valid update versions"""
         data = self.get_rds_client().describe_db_engine_versions(

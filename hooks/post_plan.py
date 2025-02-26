@@ -70,6 +70,11 @@ class RDSPlanValidator:
         ]
 
     @property
+    def aws_db_instance_creations(self) -> list[ResourceChange]:
+        "Gets the RDS isntance creations"
+        return [c for c in self.resource_creations if c.type == "aws_db_instance"]
+
+    @property
     def aws_db_instance_updates(self) -> list[ResourceChange]:
         "Gets the RDS isntance updates"
         return [c for c in self.resource_updates if c.type == "aws_db_instance"]
@@ -79,7 +84,19 @@ class RDSPlanValidator:
         "Gets the RDS instance deletions"
         return [c for c in self.resource_deletions if c.type == "aws_db_instance"]
 
-    def _validate_major_version_upgrade(self) -> None:
+    def _validate_version_on_create(self) -> None:
+        """Validates the RDS instance desired version (new instance)"""
+        for u in self.aws_db_instance_creations:
+            if not u.change or not u.change.after:
+                continue
+            engine = u.change.after["engine"]
+            version = u.change.after["engine_version"]
+            if not self.aws_api.is_rds_engine_version_available(
+                engine=engine, version=version
+            ):
+                self.errors.append(f"{engine} version {version} is not available.")
+
+    def _validate_version_upgrade(self) -> None:
         for u in self.aws_db_instance_updates:
             if not u.change or not u.change.before or not u.change.after:
                 continue
@@ -94,7 +111,7 @@ class RDSPlanValidator:
                         "Engine version cannot be updated. "
                         f"Current_version: {current_version}, "
                         f"Desired_version: {desired_version}, "
-                        f"Valid update versions: %{valid_update_versions}"
+                        f"Valid update versions: {valid_update_versions}"
                     )
 
                 # Major version upgrade validation
@@ -122,7 +139,7 @@ class RDSPlanValidator:
                 )
 
     def _validate_resource_renaming(self) -> None:
-        # is it a rename?
+        # This validation was used to migrate resources from CDKTF to HCL
         if (
             len(self.resource_deletions) != 0
             and len(self.resource_creations) != 0
@@ -133,12 +150,11 @@ class RDSPlanValidator:
         ):
             self.errors.append("Deletions and Creations mismatch")
 
-    def validate(self, *, exclude_deletion_protection_test: bool = False) -> bool:
+    def validate(self) -> bool:
         """Validate method"""
-        self._validate_major_version_upgrade()
-        if not exclude_deletion_protection_test:
-            self._validate_deletion_protection_not_enabled_on_destroy()
-        self._validate_resource_renaming()
+        self._validate_version_on_create()
+        self._validate_version_upgrade()
+        self._validate_deletion_protection_not_enabled_on_destroy()
         return not self.errors
 
 
@@ -157,9 +173,7 @@ if __name__ == "__main__":
     logger.info("Running RDS terraform plan validation")
     parser = TerraformJsonPlanParser(plan_path=terraform_plan_json)
     validator = RDSPlanValidator(parser.plan, app_interface_input)
-    # Excluding this test temporary to migrate from CDKTF
-    # Remove this once all resources have been migrated to Terraform
-    if not validator.validate(exclude_deletion_protection_test=True):
+    if not validator.validate():
         logger.error(validator.errors)
         sys.exit(1)
     else:
