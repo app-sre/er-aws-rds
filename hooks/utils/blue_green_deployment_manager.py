@@ -40,17 +40,39 @@ class BlueGreenDeploymentManager:
         bg_name = rds_identifier
         bg = self.aws_api.get_blue_green_deployment(bg_name)
         if bg:
-            if config.switchover and bg["Status"] == "AVAILABLE":
-                bg_identifier = bg["BlueGreenDeploymentIdentifier"]
-                self.logger.info(
-                    f"Action: SwitchoverBlueGreenDeployment, name: {bg_name}, identifier: {bg_identifier}"
-                )
-                if not self.dry_run:
-                    self.aws_api.switchover_blue_green_deployment(bg_identifier)
-            else:
-                self.logger.info(
-                    f"Blue/Green Deployment {rds_identifier} Status: {bg['Status']}"
-                )
+            bg_identifier = bg["BlueGreenDeploymentIdentifier"]
+            if config.switchover:
+                match bg["Status"]:
+                    case "AVAILABLE":
+                        self.logger.info(
+                            f"Action: SwitchoverBlueGreenDeployment, name: {bg_name}, identifier: {bg_identifier}"
+                        )
+                        if not self.dry_run:
+                            self.aws_api.switchover_blue_green_deployment(bg_identifier)
+                        return
+                    case "SWITCHOVER_COMPLETED":
+                        if config.delete:
+                            to_delete_instances = [
+                                instance
+                                for details in bg["SwitchoverDetails"]
+                                if (instance := self.aws_api.get_db_instance(details["SourceMember"]))
+                                and instance["DBInstanceStatus"] == "available"
+                            ]
+                            if to_delete_instances:
+                                for instance in to_delete_instances:
+                                    identifier = instance["DBInstanceIdentifier"]
+                                    self.logger.info(f"Action: DeleteSourceDBInstance, identifier: {identifier}")
+                                    if not self.dry_run:
+                                        self.aws_api.delete_db_instance(identifier)
+                            self.logger.info(f"Action: DeleteBlueGreenDeployment, name: {bg_name}, identifier: {bg_identifier}")
+                            if not to_delete_instances and not self.dry_run:
+                                self.aws_api.delete_blue_green_deployment(bg_identifier)
+                            return
+                    case _:
+                        pass
+            self.logger.info(
+                f"Blue/Green Deployment {bg_name} Status: {bg['Status']}"
+            )
             return
 
         target = config.target or BlueGreenDeploymentTarget()
