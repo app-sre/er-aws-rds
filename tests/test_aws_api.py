@@ -221,3 +221,37 @@ def test_delete_blue_green_deployment(mock_rds_client: Mock) -> None:
     mock_rds_client.delete_blue_green_deployment.assert_called_once_with(
         BlueGreenDeploymentIdentifier="identifier"
     )
+
+
+@pytest.mark.parametrize(
+    "delete_target",
+    [
+        True,
+        False,
+    ],
+)
+def test_delete_blue_green_deployment_with_delete_target(
+    mock_rds_client: Mock,
+    *,
+    delete_target: bool,
+) -> None:
+    """Test delete_blue_green_deployment"""
+    aws_api = AWSApi()
+
+    aws_api.delete_blue_green_deployment("identifier", delete_target=delete_target)
+
+    mock_rds_client.delete_blue_green_deployment.assert_called_once_with(
+        BlueGreenDeploymentIdentifier="identifier",
+        DeleteTarget=delete_target,
+    )
+
+
+def test_delete_blue_green_deployment_with_delete_target_none(mock_rds_client: Mock) -> None:
+    """Test delete_blue_green_deployment"""
+    aws_api = AWSApi()
+
+    aws_api.delete_blue_green_deployment("identifier", delete_target=None)
+
+    mock_rds_client.delete_blue_green_deployment.assert_called_once_with(
+        BlueGreenDeploymentIdentifier="identifier",
+    )

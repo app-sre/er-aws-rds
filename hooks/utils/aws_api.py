@@ -93,8 +93,21 @@ class AWSApi:
             BlueGreenDeploymentIdentifier=identifier
         )
 
-    def delete_blue_green_deployment(self, identifier: str) -> None:
-        """Delete Blue/Green Deployment"""
-        self.rds_client.delete_blue_green_deployment(
-            BlueGreenDeploymentIdentifier=identifier
-        )
+    def delete_blue_green_deployment(
+        self,
+        identifier: str,
+        *,
+        delete_target: bool | None = None,
+    ) -> None:
+        """
+        Delete Blue/Green Deployment
+
+        :param identifier: Blue/Green Deployment Identifier
+        :param delete_target: Specifies whether to delete the resources in the green environment.
+                              You can not specify this option if the blue/green deployment
+                              status is SWITCHOVER_COMPLETED.
+        """
+        kwargs = {"BlueGreenDeploymentIdentifier": identifier}
+        if delete_target is not None:
+            kwargs["DeleteTarget"] = delete_target
+        self.rds_client.delete_blue_green_deployment(**kwargs)

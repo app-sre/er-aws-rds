@@ -70,6 +70,11 @@ class BlueGreenDeploymentManager:
                             return
                     case _:
                         pass
+            elif config.delete and bg["Status"] == "AVAILABLE":
+                self.logger.info(f"Action: DeleteBlueGreenDeployment, name: {bg_name}, identifier: {bg_identifier}")
+                if not self.dry_run:
+                    self.aws_api.delete_blue_green_deployment(bg_identifier, delete_target=True)
+                return
             self.logger.info(
                 f"Blue/Green Deployment {bg_name} Status: {bg['Status']}"
             )
