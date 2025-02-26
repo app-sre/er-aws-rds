@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from logging import Logger
-from unittest.mock import Mock, create_autospec, patch
+from unittest.mock import Mock, call, create_autospec, patch
 
 import pytest
 
@@ -189,6 +189,7 @@ def test_run_when_create_blue_green_deployment_when_already_created(
     mock_aws_api.get_db_instance.return_value = {"DBInstanceArn": "some-arn"}
     mock_aws_api.get_blue_green_deployment.return_value = {
         "BlueGreenDeploymentName": "test-rds",
+        "BlueGreenDeploymentIdentifier": "some-bg-id",
         "Status": "PROVISIONING",
     }
     manager = BlueGreenDeploymentManager(
@@ -333,3 +334,133 @@ def test_run_when_switchover_in_progress(
     mock_logging.info.assert_called_once_with(
         "Blue/Green Deployment test-rds Status: SWITCHOVER_IN_PROGRESS"
     )
+
+
+BLUE_GREEN_DEPLOYMENT_SWITCHOVER_DELETE = {
+    "data": {
+        "blue_green_deployment": {
+            "enabled": True,
+            "switchover": True,
+            "delete": True,
+        }
+    }
+}
+
+
+@pytest.mark.parametrize(
+    ("additional_data", "dry_run"),
+    [
+        (BLUE_GREEN_DEPLOYMENT_SWITCHOVER_DELETE, True),
+        (BLUE_GREEN_DEPLOYMENT_SWITCHOVER_DELETE, False),
+    ],
+)
+def test_run_when_delete_after_switchover(
+    mock_aws_api: Mock,
+    mock_logging: Mock,
+    additional_data: dict,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test delete after switchover"""
+    mock_aws_api.get_db_instance.side_effect = [
+        {"DBInstanceArn": "some-arn-new", "DBInstanceStatus": "available", "DBInstanceIdentifier": "test-rds"},
+        {"DBInstanceArn": "some-arn-old", "DBInstanceStatus": "available", "DBInstanceIdentifier": "test-rds-old"},
+    ]
+    mock_aws_api.get_blue_green_deployment.return_value = {
+        "BlueGreenDeploymentName": "test-rds",
+        "BlueGreenDeploymentIdentifier": "some-bg-id",
+        "Status": "SWITCHOVER_COMPLETED",
+        "SwitchoverDetails": [
+            {
+                "SourceMember": "some-arn-old",
+                "TargetMember": "some-arn-new",
+                "Status": "SWITCHOVER_COMPLETED",
+            }
+        ],
+    }
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(additional_data),
+        dry_run=dry_run,
+    )
+
+    manager.run()
+
+    mock_aws_api.get_db_instance.assert_has_calls(
+        [
+            call("test-rds"),
+            call("some-arn-old"),
+        ]
+    )
+    mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
+    mock_logging.info.assert_has_calls(
+        [
+            call("Action: DeleteSourceDBInstance, identifier: test-rds-old"),
+            call("Action: DeleteBlueGreenDeployment, name: test-rds, identifier: some-bg-id"),
+        ]
+    )
+    mock_aws_api.delete_blue_green_deployment.assert_not_called()
+    if dry_run:
+        mock_aws_api.delete_db_instance.assert_not_called()
+    else:
+        mock_aws_api.delete_db_instance.assert_called_once_with(
+            "test-rds-old"
+        )
+
+
+@pytest.mark.parametrize(
+    ("additional_data", "dry_run"),
+    [
+        (BLUE_GREEN_DEPLOYMENT_SWITCHOVER_DELETE, True),
+        (BLUE_GREEN_DEPLOYMENT_SWITCHOVER_DELETE, False),
+    ],
+)
+def test_run_when_delete_after_switchover_and_source_deleted(
+    mock_aws_api: Mock,
+    mock_logging: Mock,
+    additional_data: dict,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test delete after switchover and source deleted"""
+    mock_aws_api.get_db_instance.side_effect = [
+        {"DBInstanceArn": "some-arn-new", "DBInstanceStatus": "available", "DBInstanceIdentifier": "test-rds"},
+        None,
+    ]
+    mock_aws_api.get_blue_green_deployment.return_value = {
+        "BlueGreenDeploymentName": "test-rds",
+        "BlueGreenDeploymentIdentifier": "some-bg-id",
+        "Status": "SWITCHOVER_COMPLETED",
+        "SwitchoverDetails": [
+            {
+                "SourceMember": "some-arn-old",
+                "TargetMember": "some-arn-new",
+                "Status": "SWITCHOVER_COMPLETED",
+            }
+        ],
+    }
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(additional_data),
+        dry_run=dry_run,
+    )
+
+    manager.run()
+
+    mock_aws_api.get_db_instance.assert_has_calls(
+        [
+            call("test-rds"),
+            call("some-arn-old"),
+        ]
+    )
+    mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
+    mock_logging.info.assert_called_once_with(
+        "Action: DeleteBlueGreenDeployment, name: test-rds, identifier: some-bg-id"
+    )
+    mock_aws_api.delete_db_instance.assert_not_called()
+    if dry_run:
+        mock_aws_api.delete_blue_green_deployment.assert_not_called()
+    else:
+        mock_aws_api.delete_blue_green_deployment.assert_called_once_with(
+            "some-bg-id"
+        )

@@ -188,7 +188,7 @@ def test_get_db_parameter_group_when_not_found(mock_rds_client: Mock) -> None:
     )
 
 
-def test_switchover_switchover_blue_green_deployment(mock_rds_client: Mock) -> None:
+def test_switchover_blue_green_deployment(mock_rds_client: Mock) -> None:
     """Test switchover_blue_green_deployment"""
     aws_api = AWSApi()
     mock_rds_client.switchover_blue_green_deployment.return_value = None
@@ -196,5 +196,28 @@ def test_switchover_switchover_blue_green_deployment(mock_rds_client: Mock) -> N
     aws_api.switchover_blue_green_deployment("identifier")
 
     mock_rds_client.switchover_blue_green_deployment.assert_called_once_with(
+        BlueGreenDeploymentIdentifier="identifier"
+    )
+
+
+def test_delete_db_instance(mock_rds_client: Mock) -> None:
+    """Test delete_db_instance"""
+    aws_api = AWSApi()
+
+    aws_api.delete_db_instance("identifier")
+
+    mock_rds_client.delete_db_instance.assert_called_once_with(
+        DBInstanceIdentifier="identifier",
+        SkipFinalSnapshot=True
+    )
+
+
+def test_delete_blue_green_deployment(mock_rds_client: Mock) -> None:
+    """Test delete_blue_green_deployment"""
+    aws_api = AWSApi()
+
+    aws_api.delete_blue_green_deployment("identifier")
+
+    mock_rds_client.delete_blue_green_deployment.assert_called_once_with(
         BlueGreenDeploymentIdentifier="identifier"
     )

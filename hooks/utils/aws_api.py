@@ -62,6 +62,12 @@ class AWSApi:
         data = self.rds_client.describe_db_instances(DBInstanceIdentifier=identifier)
         return data["DBInstances"][0] if data["DBInstances"] else None
 
+    def delete_db_instance(self, identifier: str) -> None:
+        self.rds_client.delete_db_instance(
+            DBInstanceIdentifier=identifier,
+            SkipFinalSnapshot=True,
+        )
+
     def create_blue_green_deployment(
         self, params: CreateBlueGreenDeploymentParams
     ) -> None:
@@ -84,5 +90,11 @@ class AWSApi:
     def switchover_blue_green_deployment(self, identifier: str) -> None:
         """Switchover Blue/Green Deployment"""
         self.rds_client.switchover_blue_green_deployment(
+            BlueGreenDeploymentIdentifier=identifier
+        )
+
+    def delete_blue_green_deployment(self, identifier: str) -> None:
+        """Delete Blue/Green Deployment"""
+        self.rds_client.delete_blue_green_deployment(
             BlueGreenDeploymentIdentifier=identifier
         )
