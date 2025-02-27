@@ -8,8 +8,6 @@ format:
 
 .PHONY: image_tests
 image_tests:
-	# validate_plan.py must exist
-	[ -f "hooks/pre_plan.py" ]
 	[ -f "hooks/post_plan.py" ]
 
 .PHONY: code_tests
@@ -22,6 +20,7 @@ code_tests:
 .PHONY: terraform_tests
 terraform_tests:
 	terraform fmt -check -diff module/
+
 .PHONY: test
 test: image_tests code_tests terraform_tests
 

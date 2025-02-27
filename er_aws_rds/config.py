@@ -1,8 +1,10 @@
 from external_resources_io.input import (
-    create_backend_tf_file,
-    create_tf_vars_json,
     parse_model,
     read_input_from_file,
+)
+from external_resources_io.terraform.generators import (
+    create_backend_tf_file,
+    create_tf_vars_json,
 )
 
 from er_aws_rds.input import AppInterfaceInput, TerraformModuleData
