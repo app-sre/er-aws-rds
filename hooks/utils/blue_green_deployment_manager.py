@@ -85,6 +85,18 @@ class BlueGreenDeploymentManager:
             target.parameter_group.name if target.parameter_group else None
         )
         if (
+            config.delete
+            and (parameter_group_name is None or parameter_group_name == instance["DBParameterGroups"][0]["DBParameterGroupName"])
+            and (target.iops is None or target.iops == instance["Iops"])
+            and (target.engine_version is None or target.engine_version == instance["EngineVersion"])
+            and (target.instance_class is None or target.instance_class == instance["DBInstanceClass"])
+            and (target.storage_throughput is None or target.storage_throughput == instance["StorageThroughput"])
+            and (target.storage_type is None or target.storage_type == instance["StorageType"])
+            and (target.allocated_storage is None or target.allocated_storage == instance["AllocatedStorage"])
+        ):
+            self.logger.info("No changes for Blue/Green Deployment, continue to normal flow.")
+            return
+        if (
             parameter_group_name
             and self.aws_api.get_db_parameter_group(parameter_group_name) is None
         ):
