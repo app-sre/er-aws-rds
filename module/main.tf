@@ -1,7 +1,7 @@
 data "aws_partition" "this" {}
 data "aws_db_instance" "replica_source" {
-  count                  = try(count(var.replica_source.replica_source), 0) > 0 ? 1 : 0
-  db_instance_identifier = var.replica_source.source_rds_instance_identifier
+  count                  = try(var.replica_source.identifier, null) != null ? 1 : 0
+  db_instance_identifier = var.replica_source.identifier
   provider               = aws.replica_source_provider
 }
 
