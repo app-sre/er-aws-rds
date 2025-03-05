@@ -5,7 +5,7 @@ provider "aws" {
 }
 
 provider "aws" {
-  region = try(var.replica_source.source_db_region, var.region)
+  region = try(var.replica_source.region, var.region)
   alias  = "replica_source_provider"
 }
 
