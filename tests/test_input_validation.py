@@ -112,7 +112,7 @@ def test_blue_green_deployment_parameter_group_default_name() -> None:
     })
     model = AppInterfaceInput.model_validate(mod_input)
     assert (
-        model.data.blue_green_deployment.target.parameter_group.computed_pg_name
+        model.data.blue_green_deployment.target.parameter_group.name
         == f"{model.data.identifier}-pg"
     )
 
@@ -136,7 +136,7 @@ def test_blue_green_deployment_parameter_group_name() -> None:
     })
     model = AppInterfaceInput.model_validate(mod_input)
     assert (
-        model.data.blue_green_deployment.target.parameter_group.computed_pg_name
+        model.data.blue_green_deployment.target.parameter_group.name
         == f"{model.data.identifier}-new-pg"
     )
 
@@ -190,7 +190,7 @@ def test_blue_green_deployment_parameter_group_ignore_conflict_when_enabled() ->
     })
     model = AppInterfaceInput.model_validate(mod_input)
     assert (
-        model.data.blue_green_deployment.target.parameter_group.computed_pg_name
+        model.data.blue_green_deployment.target.parameter_group.name
         == f"{model.data.identifier}-pg"
     )
 

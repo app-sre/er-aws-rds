@@ -300,14 +300,14 @@ class Rds(RdsAppInterface):
             and self.blue_green_deployment.target
             and (pg := self.blue_green_deployment.target.parameter_group)
         ):
-            pg.computed_pg_name = f"{self.identifier}-{pg.name or 'pg'}"
+            pg.name = f"{self.identifier}-{pg.name or 'pg'}"
             if not self.blue_green_deployment.enabled:
                 parameter_group_names = {
-                    group.computed_pg_name
+                    group.name
                     for group in [self.parameter_group, self.old_parameter_group]
                     if group
                 }
-                if pg.computed_pg_name in parameter_group_names:
+                if pg.name in parameter_group_names:
                     raise ValueError(
                         "Blue/Green Deployment Parameter Group name already exist"
                     )
@@ -381,14 +381,17 @@ class TerraformModuleData(BaseModel):
     @computed_field
     def parameter_groups(self) -> list[ParameterGroup] | None:
         """Parameter groups to create"""
-        return [
-            pg
-            for pg in [
-                self.ai_input.data.parameter_group,
-                self.ai_input.data.old_parameter_group,
-            ]
-            if pg
+        pgs = [
+            self.ai_input.data.parameter_group,
+            self.ai_input.data.old_parameter_group,
         ]
+        if (
+            self.ai_input.data.blue_green_deployment
+            and not self.ai_input.data.blue_green_deployment.enabled
+            and self.ai_input.data.blue_green_deployment.target
+        ):
+            pgs.append(self.ai_input.data.blue_green_deployment.target.parameter_group)
+        return list(filter(None, pgs))
 
     @computed_field
     def reset_password(self) -> str | None:

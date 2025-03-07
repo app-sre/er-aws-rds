@@ -3,10 +3,10 @@ from logging import Logger
 from unittest.mock import Mock, create_autospec, patch
 
 import pytest
+
 from hooks.utils.aws_api import AWSApi
 from hooks.utils.blue_green_deployment_manager import BlueGreenDeploymentManager
 from hooks.utils.models import CreateBlueGreenDeploymentParams
-
 from tests.conftest import input_object
 
 
@@ -134,7 +134,7 @@ def test_run_create_blue_green_deployment_with_default_target(
 
     mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
     mock_logging.info.assert_called_once_with(
-        f"Action: CreateBlueGreenDeployment, {expected_params.model_dump_json()}"
+        f"Action: CreateBlueGreenDeployment, {expected_params.model_dump(by_alias=True, exclude_none=True)}"
     )
     if dry_run:
         mock_aws_api.create_blue_green_deployment.assert_not_called()
