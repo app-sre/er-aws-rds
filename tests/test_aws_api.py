@@ -207,8 +207,7 @@ def test_delete_db_instance(mock_rds_client: Mock) -> None:
     aws_api.delete_db_instance("identifier")
 
     mock_rds_client.delete_db_instance.assert_called_once_with(
-        DBInstanceIdentifier="identifier",
-        SkipFinalSnapshot=True
+        DBInstanceIdentifier="identifier", SkipFinalSnapshot=True
     )
 
 
@@ -246,7 +245,9 @@ def test_delete_blue_green_deployment_with_delete_target(
     )
 
 
-def test_delete_blue_green_deployment_with_delete_target_none(mock_rds_client: Mock) -> None:
+def test_delete_blue_green_deployment_with_delete_target_none(
+    mock_rds_client: Mock,
+) -> None:
     """Test delete_blue_green_deployment"""
     aws_api = AWSApi()
 

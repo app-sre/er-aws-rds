@@ -42,6 +42,7 @@ def test_parameter_group_names() -> None:
         EXPECTED_OLD_PARAMETER_GROUP,
     ]
 
+
 def test_parameter_groups_when_blue_green_deployment_not_enabled() -> None:
     """Test parameter groups when blue-green deployment is not enabled"""
     model = input_object({
