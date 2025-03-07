@@ -1,6 +1,6 @@
 import logging
 
-from er_aws_rds.input import AppInterfaceInput
+from er_aws_rds.input import AppInterfaceInput, BlueGreenDeploymentTarget
 from hooks.utils.aws_api import AWSApi
 from hooks.utils.models import CreateBlueGreenDeploymentParams
 
@@ -44,21 +44,25 @@ class BlueGreenDeploymentManager:
             )
             return
 
+        target = config.target or BlueGreenDeploymentTarget()
+        parameter_group_name = (
+            target.parameter_group.name if target.parameter_group else None
+        )
         params = CreateBlueGreenDeploymentParams(
             name=identifier,
             source_arn=instance["DBInstanceArn"],
-            allocated_storage=config.target.allocated_storage,
-            engine_version=config.target.engine_version,
-            instance_class=config.target.instance_class,
-            iops=config.target.iops,
-            parameter_group_name=config.target.parameter_group.computed_pg_name,
-            storage_throughput=config.target.storage_throughput,
-            storage_type=config.target.storage_type,
+            allocated_storage=target.allocated_storage,
+            engine_version=target.engine_version,
+            instance_class=target.instance_class,
+            iops=target.iops,
+            parameter_group_name=parameter_group_name,
+            storage_throughput=target.storage_throughput,
+            storage_type=target.storage_type,
             tags=self.app_interface_input.data.tags,
         )
 
         self.logger.info(
-            f"Action: CreateBlueGreenDeployment, {params.model_dump_json()}"
+            f"Action: CreateBlueGreenDeployment, {params.model_dump(by_alias=True, exclude_none=True)}"
         )
         if not self.dry_run:
             self.aws_api.create_blue_green_deployment(params)

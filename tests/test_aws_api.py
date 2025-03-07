@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock, create_autospec, patch
 
 import pytest
+
 from hooks.utils.aws_api import AWSApi
 from hooks.utils.models import CreateBlueGreenDeploymentParams
 
