@@ -22,7 +22,7 @@ def test_parameter_group_names() -> None:
     assert model.data.parameter_group is not None
     assert model.data.old_parameter_group is not None
 
-    assert len(tf_model["parameter_groups"]) == 2  # noqa: PLR2004
+    assert len(tf_model["parameter_groups"]) == 2
     assert tf_model["parameter_groups"][0]["name"] == model.data.parameter_group.name
     assert (
         tf_model["parameter_groups"][1]["name"] == model.data.old_parameter_group.name

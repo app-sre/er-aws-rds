@@ -78,7 +78,8 @@ ignore = [
     "ISC001",
     "ERA001",
     "S404",
-    "S603"
+    "S603",
+    "PLR2004"
 ]
 [tool.ruff.format]
 preview = true

@@ -136,7 +136,7 @@ class Rds(RdsAppInterface):
     engine: str | None = None
     allow_major_version_upgrade: bool | None = False
     availability_zone: str | None = None
-    monitoring_interval: int | None = 0
+    monitoring_interval: int | None = None
     monitoring_role_arn: str | None = None
     apply_immediately: bool | None = False
     multi_az: bool | None = False
@@ -276,28 +276,26 @@ class Rds(RdsAppInterface):
         return self.replica_source is not None or self.replicate_source_db is not None
 
     @model_validator(mode="after")
-    def enhanced_monitoring_attributes_require_enhanced_monitoring(self) -> "Rds":
-        """If monitoring_interval is set, enhanced_monitoring must be enabled"""
-        if not self.enhanced_monitoring and (
-            self.monitoring_interval != 0 or self.monitoring_role_arn
-        ):
-            raise ValueError(
-                "Enhanced monitoring attributes requires enhanced_monitoring to be true"
-            )
-        return self
+    def enhanced_monitoring_attributes(self) -> "Rds":
+        """
+        Enhanced monitoring validation:
 
-    @model_validator(mode="after")
-    def monitoring_role_arn_requires_monitoring_interval(self) -> "Rds":
-        """If monitoring_role_arn is set, monitoring_interval must be != 0"""
-        if self.monitoring_role_arn and self.monitoring_interval == 0:
-            raise ValueError("monitoring_role_arn requires a monitoring_interval != 0")
-        return self
-
-    @model_validator(mode="after")
-    def enhanced_monitoring_requires_monitoring_inverval(self) -> "Rds":
-        """If monitoring_role_arn is set, monitoring_interval must be != 0"""
+        * If em is disabled, related parameters are removed.
+        * If em is enabled and no monitoring_inverval specificied, set the default value (60)
+        * If em is enabled and monitoring_interval is set to 0. Raise Validation Error
+        """
         if self.enhanced_monitoring and self.monitoring_interval == 0:
-            raise ValueError("enhanced_monitoring requires a monitoring_interval != 0")
+            raise ValueError(
+                "Monitoring interval can not be 0 when enhanced monitoring is enabled."
+                "Set enhanced_monitoring=0 to disable Enhanced monitoring."
+            )
+        if self.enhanced_monitoring and self.monitoring_interval is None:
+            self.monitoring_interval = 60
+
+        if not self.enhanced_monitoring:
+            self.monitoring_interval = None
+            self.monitoring_role_arn = None
+
         return self
 
     @model_validator(mode="after")

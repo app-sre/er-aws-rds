@@ -34,8 +34,6 @@ def input_data(additional_data: dict[str, Any] | None = None) -> dict:
             "publicly_accessible": True,
             "apply_immediately": True,
             "identifier": "test-rds",
-            "enhanced_monitoring": True,
-            "monitoring_interval": 60,
             "parameter_group": {
                 "name": "test-pg",
                 "family": "postgres14",

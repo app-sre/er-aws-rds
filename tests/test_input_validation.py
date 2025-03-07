@@ -101,44 +101,55 @@ def test_name() -> None:
     AppInterfaceInput.model_validate(mod_input)
 
 
-def test_enhanced_monitoring_configuration_requires_enhanced_monitoring() -> None:
-    """enhanced_monitoring_configuration requires enhanced_monitoring"""
-    mod_input = input_data({
-        "data": {"enhanced_monitoring": False, "monitoring_interval": 60}
-    })
-    with pytest.raises(
-        ValidationError,
-        match=r".*Enhanced monitoring attributes requires enhanced_monitoring to be true.*",
-    ):
-        AppInterfaceInput.model_validate(mod_input)
-
-    mod_input = input_data({
-        "data": {
-            "enhanced_monitoring": False,
-            "monitoring_interval": 0,
-            "monitoring_role_arn": "arn:bla:bla",
-        }
-    })
-    with pytest.raises(
-        ValidationError,
-        match=r".*Enhanced monitoring attributes requires enhanced_monitoring to be true.*",
-    ):
-        AppInterfaceInput.model_validate(mod_input)
-
-
-def test_enhanced_monitoring_requires_monitoring_interval() -> None:
+def test_enhanced_monitoring_sets_default_monitoring_interval() -> None:
     """monitoring_interval != 0 enables enhanced_monitoring"""
-    mod_input = input_data({
-        "data": {
-            "enhanced_monitoring": True,
-            "monitoring_interval": 0,
-        }
-    })
+    model = AppInterfaceInput.model_validate(
+        input_data({
+            "data": {
+                "enhanced_monitoring": True,
+            }
+        })
+    )
+    assert model.data.monitoring_interval == 60
+
+
+def test_enhanced_monitoring_custom_monitoring_interval() -> None:
+    """Test for enhanced monitoring tests"""
+    model = AppInterfaceInput.model_validate(
+        input_data({"data": {"enhanced_monitoring": True, "monitoring_interval": 90}})
+    )
+    assert model.data.monitoring_interval == 90
+
+
+def test_no_enhanced_monitoring_disables_enhanced_monitoring() -> None:
+    """enhanced_monitoring_configuration requires enhanced_monitoring"""
+    model = AppInterfaceInput.model_validate(
+        input_data({
+            "data": {
+                "enhanced_monitoring": False,
+                "monitoring_interval": 90,
+                "monitoring_role_arn": "arn:bla:bla",
+            }
+        })
+    )
+    assert model.data.monitoring_interval is None
+    assert model.data.monitoring_role_arn is None
+
+
+def test_enhanced_monitoring_with_monitoring_interval_0() -> None:
+    """enhanced_monitoring_configuration requires enhanced_monitoring"""
     with pytest.raises(
         ValidationError,
-        match=r".*enhanced_monitoring requires a monitoring_interval != 0.*",
+        match=r".*Monitoring interval can not be 0 when enhanced monitoring is enabled.*",
     ):
-        AppInterfaceInput.model_validate(mod_input)
+        AppInterfaceInput.model_validate(
+            input_data({
+                "data": {
+                    "enhanced_monitoring": True,
+                    "monitoring_interval": 0,
+                }
+            })
+        )
 
 
 def test_monitoring_role_arn_requires_monitoring_interval() -> None:
@@ -146,15 +157,12 @@ def test_monitoring_role_arn_requires_monitoring_interval() -> None:
     mod_input = input_data({
         "data": {
             "enhanced_monitoring": True,
-            "monitoring_interval": 0,
             "monitoring_role_arn": "A-Role-ARN",
         }
     })
-    with pytest.raises(
-        ValidationError,
-        match=r".*monitoring_role_arn requires a monitoring_interval != 0.*",
-    ):
-        AppInterfaceInput.model_validate(mod_input)
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert model.data.monitoring_interval == 60
+    assert model.data.monitoring_role_arn == "A-Role-ARN"
 
 
 def test_very_long_enhanced_monitoring_role_name() -> None:
