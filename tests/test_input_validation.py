@@ -5,7 +5,9 @@ from er_aws_rds.errors import RDSLogicalReplicationError
 from er_aws_rds.input import (
     ENHANCED_MONITORING_ROLE_NAME_MAX_LENGTH,
     AppInterfaceInput,
+    BlueGreenDeploymentTarget,
     Parameter,
+    ParameterGroup,
 )
 
 from .conftest import input_data
@@ -111,9 +113,12 @@ def test_blue_green_deployment_parameter_group_default_name() -> None:
         }
     })
     model = AppInterfaceInput.model_validate(mod_input)
-    assert (
-        model.data.blue_green_deployment.target.parameter_group.name
-        == f"{model.data.identifier}-pg"
+    assert model.data.blue_green_deployment is not None
+    assert model.data.blue_green_deployment.target == BlueGreenDeploymentTarget(
+        parameter_group=ParameterGroup(
+            name=f"{model.data.identifier}-pg",
+            family="postgres16",
+        )
     )
 
 
@@ -135,9 +140,12 @@ def test_blue_green_deployment_parameter_group_name() -> None:
         }
     })
     model = AppInterfaceInput.model_validate(mod_input)
-    assert (
-        model.data.blue_green_deployment.target.parameter_group.name
-        == f"{model.data.identifier}-new-pg"
+    assert model.data.blue_green_deployment is not None
+    assert model.data.blue_green_deployment.target == BlueGreenDeploymentTarget(
+        parameter_group=ParameterGroup(
+            name=f"{model.data.identifier}-new-pg",
+            family="postgres16",
+        )
     )
 
 
@@ -189,9 +197,12 @@ def test_blue_green_deployment_parameter_group_ignore_conflict_when_enabled() ->
         }
     })
     model = AppInterfaceInput.model_validate(mod_input)
-    assert (
-        model.data.blue_green_deployment.target.parameter_group.name
-        == f"{model.data.identifier}-pg"
+    assert model.data.blue_green_deployment is not None
+    assert model.data.blue_green_deployment.target == BlueGreenDeploymentTarget(
+        parameter_group=ParameterGroup(
+            name=f"{model.data.identifier}-pg",
+            family="postgres16",
+        )
     )
 
 
