@@ -80,7 +80,7 @@ class BaseAction(BaseModel, ABC):
 
 
 class NoOpAction(BaseAction):
-    """No Operation Action"""
+    """No Operation Action, just for State Transition"""
 
     type: Literal[ActionType.NO_OP] = ActionType.NO_OP
 

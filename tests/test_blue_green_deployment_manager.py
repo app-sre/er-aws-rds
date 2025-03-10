@@ -155,9 +155,7 @@ def test_run_when_no_blue_green_deployment_config(
     state = manager.run()
 
     assert state == State.NOT_ENABLED
-    mock_logging.info.assert_called_once_with(
-        "blue_green_deployment not enabled, skip Blue/Green Deployment management."
-    )
+    mock_logging.info.assert_called_once_with("blue_green_deployment not enabled.")
 
 
 @pytest.mark.parametrize("dry_run", [True, False])
@@ -178,17 +176,22 @@ def test_run_when_not_enabled(
     state = manager.run()
 
     assert state == State.NOT_ENABLED
-    mock_logging.info.assert_called_once_with(
-        "blue_green_deployment not enabled, skip Blue/Green Deployment management."
-    )
+    mock_logging.info.assert_called_once_with("blue_green_deployment not enabled.")
 
 
-@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.INIT),
+        (False, State.AVAILABLE),
+    ],
+)
 def test_run_create_blue_green_deployment_with_no_target(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test create with no target"""
     additional_data = build_blue_green_deployment_data(enabled=True, target={})
@@ -228,7 +231,7 @@ def test_run_create_blue_green_deployment_with_no_target(
 
     state = manager.run()
 
-    assert state == State.AVAILABLE
+    assert state == expected_state
     mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
     mock_logging.info.assert_has_calls([
         call(f"Action create: {expected_create_action.model_dump_json()}"),
@@ -244,12 +247,19 @@ def test_run_create_blue_green_deployment_with_no_target(
         )
 
 
-@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.INIT),
+        (False, State.AVAILABLE),
+    ],
+)
 def test_run_create_blue_green_deployment_with_default_target(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test create default"""
     additional_data = build_blue_green_deployment_data(enabled=True)
@@ -297,7 +307,7 @@ def test_run_create_blue_green_deployment_with_default_target(
 
     state = manager.run()
 
-    assert state == State.AVAILABLE
+    assert state == expected_state
     mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
     mock_logging.info.assert_has_calls([
         call(f"Action create: {expected_create_action.model_dump_json()}"),
@@ -339,12 +349,19 @@ def test_run_create_blue_green_deployment_when_rds_not_found(
     mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
 
 
-@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.PROVISIONING),
+        (False, State.AVAILABLE),
+    ],
+)
 def test_run_when_create_blue_green_deployment_when_already_created(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test create when already created"""
     setup_aws_api_side_effects(
@@ -369,7 +386,7 @@ def test_run_when_create_blue_green_deployment_when_already_created(
 
     state = manager.run()
 
-    assert state == State.AVAILABLE
+    assert state == expected_state
     mock_aws_api.create_blue_green_deployment.assert_not_called()
     mock_logging.info.assert_called_once_with(
         f"Action wait_for_available: {expected_wait_for_available_action.model_dump_json()}"
@@ -406,10 +423,10 @@ def test_run_when_create_blue_green_deployment_with_parameter_group_not_found(
 
 
 @pytest.mark.parametrize(
-    "dry_run",
+    ("dry_run", "expected_state"),
     [
-        True,
-        False,
+        (True, State.AVAILABLE),
+        (False, State.SWITCHOVER_COMPLETED),
     ],
 )
 def test_run_when_switchover(
@@ -417,6 +434,7 @@ def test_run_when_switchover(
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test switchover"""
     setup_aws_api_side_effects(
@@ -445,7 +463,7 @@ def test_run_when_switchover(
 
     state = manager.run()
 
-    assert state == State.SWITCHOVER_COMPLETED
+    assert state == expected_state
     mock_logging.info.assert_has_calls([
         call(f"Action switchover: {expected_switchover_action.model_dump_json()}"),
         call(
@@ -460,12 +478,19 @@ def test_run_when_switchover(
         )
 
 
-@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.SWITCHOVER_IN_PROGRESS),
+        (False, State.SWITCHOVER_COMPLETED),
+    ],
+)
 def test_run_when_switchover_in_progress(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test switchover in progress"""
     setup_aws_api_side_effects(
@@ -490,19 +515,26 @@ def test_run_when_switchover_in_progress(
 
     state = manager.run()
 
-    assert state == State.SWITCHOVER_COMPLETED
+    assert state == expected_state
     mock_aws_api.switchover_blue_green_deployment.assert_not_called()
     mock_logging.info.assert_called_once_with(
         f"Action wait_for_switchover_completed: {expected_wait_for_switchover_action.model_dump_json()}"
     )
 
 
-@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.SWITCHOVER_COMPLETED),
+        (False, State.NO_OP),
+    ],
+)
 def test_run_when_delete_after_switchover(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test delete after switchover"""
     setup_aws_api_side_effects(
@@ -562,7 +594,7 @@ def test_run_when_delete_after_switchover(
 
     state = manager.run()
 
-    assert state == State.NO_OP
+    assert state == expected_state
     mock_aws_api.get_db_instance.assert_has_calls([
         call("test-rds"),
         call("some-arn-old"),
@@ -588,12 +620,19 @@ def test_run_when_delete_after_switchover(
         mock_aws_api.delete_blue_green_deployment.assert_called_once_with("some-bg-id")
 
 
-@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.SOURCE_DB_INSTANCES_DELETED),
+        (False, State.NO_OP),
+    ],
+)
 def test_run_when_delete_after_switchover_and_source_deleted(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test delete after switchover and source deleted"""
     setup_aws_api_side_effects(
@@ -639,7 +678,7 @@ def test_run_when_delete_after_switchover_and_source_deleted(
 
     state = manager.run()
 
-    assert state == State.NO_OP
+    assert state == expected_state
     mock_aws_api.get_db_instance.assert_has_calls([
         call("test-rds"),
         call("some-arn-old"),
@@ -658,12 +697,19 @@ def test_run_when_delete_after_switchover_and_source_deleted(
         mock_aws_api.delete_blue_green_deployment.assert_called_once_with("some-bg-id")
 
 
-@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.AVAILABLE),
+        (False, State.NO_OP),
+    ],
+)
 def test_run_when_delete_without_switchover(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test delete without switchover"""
     setup_aws_api_side_effects(
@@ -693,7 +739,7 @@ def test_run_when_delete_without_switchover(
 
     state = manager.run()
 
-    assert state == State.NO_OP
+    assert state == expected_state
     mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     mock_logging.info.assert_has_calls([
         call(
@@ -755,20 +801,25 @@ def test_run_when_no_changes_and_no_blue_green_deployment(
 
     state = manager.run()
 
-    assert state == State.NO_OP
+    assert state == State.INIT
     mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
     mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
-    mock_logging.info.assert_called_once_with(
-        "No changes for Blue/Green Deployment, continue to normal flow."
-    )
+    mock_logging.info.assert_called_once_with("No changes for Blue/Green Deployment.")
 
 
-@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.INIT),
+        (False, State.NO_OP),
+    ],
+)
 def test_run_when_all_in_one_config(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
     dry_run: bool,
+    expected_state: State,
 ) -> None:
     """Test all in one config"""
     setup_aws_api_side_effects(
@@ -849,7 +900,7 @@ def test_run_when_all_in_one_config(
 
     state = manager.run()
 
-    assert state == State.NO_OP
+    assert state == expected_state
     mock_logging.info.assert_has_calls([
         call(f"Action create: {expected_create_action.model_dump_json()}"),
         call(
