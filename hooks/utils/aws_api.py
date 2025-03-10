@@ -25,12 +25,11 @@ class AWSApi:
         self.rds_client: RDSClient = self.session.client("rds")
 
     def is_rds_engine_version_available(self, engine: str, version: str) -> bool:
-        """Gets the available versions for an Rds engine"""
-        data = (
-            self.get_rds_client()
-            .describe_db_engine_versions(Engine=engine, EngineVersion=version)
-            .get("DBEngineVersions", [])
-        )
+        """Checks if the engine version is available"""
+        data = self.rds_client.describe_db_engine_versions(
+            Engine=engine,
+            EngineVersion=version,
+        ).get("DBEngineVersions", [])
 
         return len(data) == 1 and data[0].get("EngineVersion") == version
 

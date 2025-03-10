@@ -45,6 +45,30 @@ def mock_rds_client() -> Iterator[Mock]:
         yield client
 
 
+@pytest.mark.parametrize(
+    ("versions", "expected"),
+    [
+        ([{"EngineVersion": "16.1"}], True),
+        ([], False),
+    ],
+)
+def test_is_rds_engine_version_available(
+    mock_rds_client: Mock,
+    versions: list[dict[str, str]],
+    *,
+    expected: bool,
+) -> None:
+    """Test is_rds_engine_version_available"""
+    mock_rds_client.describe_db_engine_versions.return_value = {
+        "DBEngineVersions": versions,
+    }
+    aws_api = AWSApi()
+
+    result = aws_api.is_rds_engine_version_available("postgres", "16.1")
+
+    assert result == expected
+
+
 def test_get_db_instance(mock_rds_client: Mock) -> None:
     """Test get_db_instance"""
     expected_result: DBInstanceTypeDef = {

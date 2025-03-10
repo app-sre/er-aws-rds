@@ -1,12 +1,11 @@
+from collections.abc import Iterator
 from typing import Any
 from unittest.mock import Mock, patch
 
-import boto3
 import pytest
 from external_resources_io.terraform import Action, Plan
 
 from hooks.post_plan import RDSPlanValidator
-from hooks.utils.aws_api import AWSApi
 
 from .conftest import input_object
 
@@ -34,42 +33,35 @@ def new_instance_plan() -> dict[str, Any]:
 
 
 @pytest.fixture
-def rds_client_mock() -> Mock:
-    """Return a mock of the boto3 rds client"""
-    return Mock(boto3.client("rds", region_name="us-east-1"))
+def mock_aws_api() -> Iterator[Mock]:
+    """Patch AWSApi"""
+    with patch("hooks.post_plan.AWSApi", autospec=True) as m:
+        yield m
 
 
-def test_validate_desired_version_ok(
-    new_instance_plan: dict[str, Any], rds_client_mock: Mock
+@pytest.mark.parametrize(
+    ("is_rds_engine_version_available", "expected_errors"),
+    [
+        (True, []),
+        (False, ["postgres version 16.1 is not available."]),
+    ],
+)
+def test_validate_desired_version(
+    new_instance_plan: dict[str, Any],
+    mock_aws_api: Mock,
+    *,
+    is_rds_engine_version_available: bool,
+    expected_errors: list[str],
 ) -> None:
     """Test engine version available in AWS"""
-    rds_client_mock.describe_db_engine_versions.return_value = {
-        "DBEngineVersions": [
-            {"EngineVersion": "16.1"},
-        ]
-    }
+    mock_aws_api.return_value.is_rds_engine_version_available.return_value = (
+        is_rds_engine_version_available
+    )
 
-    with patch.object(AWSApi, "get_rds_client", return_value=rds_client_mock):
-        plan = Plan.model_validate(new_instance_plan)
-        validator = RDSPlanValidator(plan, input_object())
-        validator.validate()
-        assert validator.errors == []
-
-
-def test_validate_desired_version_nok(
-    new_instance_plan: dict[str, Any], rds_client_mock: Mock
-) -> None:
-    """Test engine version not available in AWS"""
-    rds_client_mock.describe_db_engine_versions.return_value = {
-        "DBEngineVersions": [
-            {"EngineVersion": "16.2"},
-        ]
-    }
-    with patch.object(AWSApi, "get_rds_client", return_value=rds_client_mock):
-        plan = Plan.model_validate(new_instance_plan)
-        validator = RDSPlanValidator(plan, input_object())
-        validator.validate()
-        assert validator.errors == ["postgres version 16.1 is not available."]
+    plan = Plan.model_validate(new_instance_plan)
+    validator = RDSPlanValidator(plan, input_object())
+    validator.validate()
+    assert validator.errors == expected_errors
 
 
 def test_validate_deletion_protection_not_enabled_on_destroy() -> None:
