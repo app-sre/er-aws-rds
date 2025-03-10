@@ -46,23 +46,18 @@ class BlueGreenDeploymentManager:
         """Run Blue/Green Deployment Manager"""
         config = self.app_interface_input.data.blue_green_deployment
         if config is None or not config.enabled:
-            self.logger.info(
-                "blue_green_deployment not enabled, skip Blue/Green Deployment management."
-            )
+            self.logger.info("blue_green_deployment not enabled.")
             return State.NOT_ENABLED
         self.model = self._build_model(config)
         actions = self.model.plan_actions()
         if not actions:
-            self.logger.info(
-                "No changes for Blue/Green Deployment, continue to normal flow."
-            )
-            return State.NO_OP
+            self.logger.info("No changes for Blue/Green Deployment.")
         for action in actions:
             self.logger.info(f"Action {action.type}: {action.model_dump_json()}")
             if not self.dry_run:
                 handler = self._action_handlers[action.type]
                 handler(action)
-            self.model.state = action.next_state
+                self.model.state = action.next_state
         return self.model.state
 
     def _build_model(self, config: BlueGreenDeployment) -> BlueGreenDeploymentModel:

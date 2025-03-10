@@ -92,6 +92,8 @@ class BlueGreenDeploymentModel(BaseModel):
         while state != State.NO_OP:
             routing_func, allowed_next_states = self._state_graph[state]
             action = routing_func()
+            if action is None:
+                break
             next_state = action.next_state
             if next_state not in allowed_next_states:
                 raise ValueError(f"Invalid next state: {next_state} for state: {state}")
@@ -133,7 +135,30 @@ class BlueGreenDeploymentModel(BaseModel):
         )
 
     @cached_property
-    def _state_graph(self) -> dict[State, tuple[Callable[[], BaseAction], list[State]]]:
+    def _state_graph(
+        self,
+    ) -> dict[State, tuple[Callable[[], BaseAction | None], list[State]]]:
+        """
+        State graph
+
+        mermaid graph is:
+
+        flowchart TD
+            START --> INIT
+            INIT --> NO_OP
+            INIT --> PROVISIONING
+            PROVISIONING --> AVAILABLE
+            AVAILABLE --> SWITCHOVER_IN_PROGRESS
+            AVAILABLE --> DELETING
+            SWITCHOVER_IN_PROGRESS --> SWITCHOVER_COMPLETED
+            SWITCHOVER_COMPLETED --> DELETING_SOURCE_DB_INSTANCES
+            DELETING_SOURCE_DB_INSTANCES --> SOURCE_DB_INSTANCES_DELETED
+            SOURCE_DB_INSTANCES_DELETED --> DELETING
+            DELETING --> NO_OP
+            NO_OP --> END
+            AVAILABLE --> END
+            SWITCHOVER_COMPLETED --> END
+        """
         return {
             State.INIT: (
                 self._route_init,
@@ -145,7 +170,7 @@ class BlueGreenDeploymentModel(BaseModel):
             ),
             State.AVAILABLE: (
                 self._route_available,
-                [State.SWITCHOVER_IN_PROGRESS, State.DELETING, State.NO_OP],
+                [State.SWITCHOVER_IN_PROGRESS, State.DELETING],
             ),
             State.SWITCHOVER_IN_PROGRESS: (
                 self._route_switchover_in_progress,
@@ -153,7 +178,7 @@ class BlueGreenDeploymentModel(BaseModel):
             ),
             State.SWITCHOVER_COMPLETED: (
                 self._route_switchover_completed,
-                [State.DELETING_SOURCE_DB_INSTANCES, State.NO_OP],
+                [State.DELETING_SOURCE_DB_INSTANCES],
             ),
             State.DELETING_SOURCE_DB_INSTANCES: (
                 self._route_deleting_source_db_instances,
@@ -169,7 +194,7 @@ class BlueGreenDeploymentModel(BaseModel):
             ),
         }
 
-    def _route_init(self) -> BaseAction:
+    def _route_init(self) -> BaseAction | None:
         target = self.config.target or BlueGreenDeploymentTarget()
         parameter_group_name = (
             target.parameter_group.name if target.parameter_group else None
@@ -195,13 +220,13 @@ class BlueGreenDeploymentModel(BaseModel):
         )
 
     @staticmethod
-    def _route_provisioning() -> BaseAction:
+    def _route_provisioning() -> BaseAction | None:
         return WaitForAvailableAction(
             type=ActionType.WAIT_FOR_AVAILABLE,
             next_state=State.AVAILABLE,
         )
 
-    def _route_available(self) -> BaseAction:
+    def _route_available(self) -> BaseAction | None:
         if self.config.switchover:
             return SwitchoverAction(
                 type=ActionType.SWITCHOVER,
@@ -212,45 +237,39 @@ class BlueGreenDeploymentModel(BaseModel):
                 type=ActionType.DELETE_WITHOUT_SWITCHOVER,
                 next_state=State.DELETING,
             )
-        return NoOpAction(
-            type=ActionType.NO_OP,
-            next_state=State.NO_OP,
-        )
+        return None
 
     @staticmethod
-    def _route_switchover_in_progress() -> BaseAction:
+    def _route_switchover_in_progress() -> BaseAction | None:
         return WaitForSwitchoverCompletedAction(
             type=ActionType.WAIT_FOR_SWITCHOVER_COMPLETED,
             next_state=State.SWITCHOVER_COMPLETED,
         )
 
-    def _route_switchover_completed(self) -> BaseAction:
+    def _route_switchover_completed(self) -> BaseAction | None:
         if self.config.delete:
             return DeleteSourceDBInstanceAction(
                 type=ActionType.DELETE_SOURCE_DB_INSTANCE,
                 next_state=State.DELETING_SOURCE_DB_INSTANCES,
             )
-        return NoOpAction(
-            type=ActionType.NO_OP,
-            next_state=State.NO_OP,
-        )
+        return None
 
     @staticmethod
-    def _route_deleting_source_db_instances() -> BaseAction:
+    def _route_deleting_source_db_instances() -> BaseAction | None:
         return WaitForSourceDBInstancesDeletedAction(
             type=ActionType.WAIT_FOR_SOURCE_DB_INSTANCES_DELETED,
             next_state=State.SOURCE_DB_INSTANCES_DELETED,
         )
 
     @staticmethod
-    def _route_source_db_instances_deleted() -> BaseAction:
+    def _route_source_db_instances_deleted() -> BaseAction | None:
         return DeleteAction(
             type=ActionType.DELETE,
             next_state=State.DELETING,
         )
 
     @staticmethod
-    def _route_deleting() -> BaseAction:
+    def _route_deleting() -> BaseAction | None:
         return WaitForDeletedAction(
             type=ActionType.WAIT_FOR_DELETED,
             next_state=State.NO_OP,
