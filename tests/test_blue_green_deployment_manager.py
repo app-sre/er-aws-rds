@@ -568,6 +568,11 @@ def test_run_when_delete_after_switchover(
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds-old",
             },
+            {
+                "DBInstanceArn": "some-arn-old",
+                "DBInstanceStatus": "available",
+                "DBInstanceIdentifier": "test-rds-old",
+            },
             None,
         ],
         get_blue_green_deployment=[
