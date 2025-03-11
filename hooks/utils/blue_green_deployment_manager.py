@@ -156,11 +156,10 @@ class BlueGreenDeploymentManager:
         self, _: DeleteSourceDBInstanceAction
     ) -> None:
         assert self.model
-        if not self.model.source_db_instances:
-            assert self.model.blue_green_deployment
-            self.model.source_db_instances = self._fetch_source_db_instances(
-                self.model.blue_green_deployment
-            )
+        assert self.model.blue_green_deployment
+        self.model.source_db_instances = self._fetch_source_db_instances(
+            self.model.blue_green_deployment
+        )
         for instance in self.model.source_db_instances:
             self.aws_api.delete_db_instance(instance["DBInstanceIdentifier"])
 
