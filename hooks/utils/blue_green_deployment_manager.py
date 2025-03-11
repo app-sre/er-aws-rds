@@ -23,6 +23,7 @@ from hooks.utils.models import (
     WaitForSourceDBInstancesDeletedAction,
     WaitForSwitchoverCompletedAction,
 )
+from hooks.utils.wait import wait_for
 
 
 class BlueGreenDeploymentManager:
@@ -122,11 +123,15 @@ class BlueGreenDeploymentManager:
     def _handle_create(self, action: CreateAction) -> None:
         self.aws_api.create_blue_green_deployment(action.payload)
 
-    def _handle_wait_for_available(self, _: WaitForAvailableAction) -> None:
+    def _wait_for_available_condition(self) -> bool:
         assert self.model
         self.model.blue_green_deployment = self.aws_api.get_blue_green_deployment(
             self.model.db_instance_identifier
         )
+        return self.model.blue_green_deployment["Status"] == "AVAILABLE"
+
+    def _handle_wait_for_available(self, _: WaitForAvailableAction) -> None:
+        wait_for(self._wait_for_available_condition, logger=self.logger)
 
     def _handle_switchover(self, _: SwitchoverAction) -> None:
         assert self.model
@@ -134,14 +139,18 @@ class BlueGreenDeploymentManager:
         identifier = self.model.blue_green_deployment["BlueGreenDeploymentIdentifier"]
         self.aws_api.switchover_blue_green_deployment(identifier)
 
-    def _handle_wait_for_switchover_completed(
-        self, _: WaitForSwitchoverCompletedAction
-    ) -> None:
+    def _wait_for_switchover_completed_condition(self) -> bool:
         assert self.model
         assert self.model.db_instance_identifier
         self.model.blue_green_deployment = self.aws_api.get_blue_green_deployment(
             self.model.db_instance_identifier
         )
+        return self.model.blue_green_deployment["Status"] == "SWITCHOVER_COMPLETED"
+
+    def _handle_wait_for_switchover_completed(
+        self, _: WaitForSwitchoverCompletedAction
+    ) -> None:
+        wait_for(self._wait_for_switchover_completed_condition, logger=self.logger)
 
     def _handle_delete_source_db_instance(
         self, _: DeleteSourceDBInstanceAction
@@ -155,10 +164,18 @@ class BlueGreenDeploymentManager:
         for instance in self.model.source_db_instances:
             self.aws_api.delete_db_instance(instance["DBInstanceIdentifier"])
 
+    def _wait_for_source_db_instances_deleted_condition(self) -> bool:
+        assert self.model
+        assert self.model.blue_green_deployment
+        self.model.source_db_instances = self._fetch_source_db_instances(
+            self.model.blue_green_deployment
+        )
+        return len(self.model.source_db_instances) == 0
+
     def _handle_wait_for_source_db_instances_deleted(
         self, _: WaitForSourceDBInstancesDeletedAction
     ) -> None:
-        pass
+        wait_for(self._wait_for_source_db_instances_deleted_condition, logger=self.logger)
 
     def _handle_delete(self, _: DeleteAction) -> None:
         assert self.model
@@ -172,5 +189,12 @@ class BlueGreenDeploymentManager:
         identifier = self.model.blue_green_deployment["BlueGreenDeploymentIdentifier"]
         self.aws_api.delete_blue_green_deployment(identifier, delete_target=True)
 
+    def _wait_for_delete_condition_condition(self) -> bool:
+        assert self.model
+        self.model.blue_green_deployment = self.aws_api.get_blue_green_deployment(
+            self.model.db_instance_identifier
+        )
+        return self.model.blue_green_deployment is None
+
     def _handle_wait_for_delete(self, _: WaitForDeletedAction) -> None:
-        pass
+        wait_for(self._wait_for_delete_condition_condition, logger=self.logger)
