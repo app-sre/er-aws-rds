@@ -36,6 +36,7 @@ class BlueGreenDeploymentModel(BaseModel):
     target_db_parameter_group: DBParameterGroupTypeDef | None = None
     blue_green_deployment: BlueGreenDeploymentTypeDef | None = None
     source_db_instances: list[DBInstanceTypeDef] = []
+    target_db_instances: list[DBInstanceTypeDef] = []
     tags: dict[str, str] | None = None
 
     @model_validator(mode="after")
@@ -47,7 +48,11 @@ class BlueGreenDeploymentModel(BaseModel):
             case "PROVISIONING":
                 self.state = State.PROVISIONING
             case "AVAILABLE":
-                self.state = State.AVAILABLE
+                self.state = (
+                    State.AVAILABLE
+                    if self.is_blue_green_deployment_available()
+                    else State.PROVISIONING
+                )
             case "SWITCHOVER_IN_PROGRESS":
                 self.state = State.SWITCHOVER_IN_PROGRESS
             case "SWITCHOVER_COMPLETED":
@@ -101,6 +106,16 @@ class BlueGreenDeploymentModel(BaseModel):
                 actions.append(action)
             state = next_state
         return actions
+
+    def is_blue_green_deployment_available(self) -> bool:
+        """Check if Blue/Green Deployment is available"""
+        return (
+            self.blue_green_deployment is not None
+            and self.blue_green_deployment["Status"] == "AVAILABLE"
+            and all(
+                db["DBInstanceStatus"] == "available" for db in self.target_db_instances
+            )
+        )
 
     def _no_changes(self) -> bool:
         target = self.config.target or BlueGreenDeploymentTarget()
