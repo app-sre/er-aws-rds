@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable
 from functools import cached_property
-from typing import Any
+from typing import Any, Literal
 
 from mypy_boto3_rds.type_defs import BlueGreenDeploymentTypeDef, DBInstanceTypeDef
 
@@ -77,11 +77,8 @@ class BlueGreenDeploymentManager:
         blue_green_deployment = self.aws_api.get_blue_green_deployment(
             db_instance_identifier
         )
-        source_db_instances = (
-            self._fetch_source_db_instances(blue_green_deployment)
-            if blue_green_deployment
-            else []
-        )
+        source_db_instances = self._fetch_source_db_instances(blue_green_deployment)
+        target_db_instances = self._fetch_target_db_instances(blue_green_deployment)
         return BlueGreenDeploymentModel(
             db_instance_identifier=db_instance_identifier,
             state=State.INIT,
@@ -90,20 +87,42 @@ class BlueGreenDeploymentManager:
             target_db_parameter_group=target_db_parameter_group,
             blue_green_deployment=blue_green_deployment,
             source_db_instances=source_db_instances,
+            target_db_instances=target_db_instances,
             tags=self.app_interface_input.data.tags,
         )
 
-    def _fetch_source_db_instances(
-        self, blue_green_deployment: BlueGreenDeploymentTypeDef
+    def _fetch_blue_green_deployment_member_instances(
+        self,
+        blue_green_deployment: BlueGreenDeploymentTypeDef | None,
+        key: Literal["SourceMember", "TargetMember"],
     ) -> list[DBInstanceTypeDef]:
+        if blue_green_deployment is None:
+            return []
         return list(
             filter(
                 None,
                 (
-                    self.aws_api.get_db_instance(details["SourceMember"])
-                    for details in blue_green_deployment["SwitchoverDetails"]
+                    self.aws_api.get_db_instance(identifier)
+                    for details in blue_green_deployment.get("SwitchoverDetails", [])
+                    if (identifier := details.get(key))
                 ),
             )
+        )
+
+    def _fetch_source_db_instances(
+        self,
+        blue_green_deployment: BlueGreenDeploymentTypeDef | None,
+    ) -> list[DBInstanceTypeDef]:
+        return self._fetch_blue_green_deployment_member_instances(
+            blue_green_deployment, "SourceMember"
+        )
+
+    def _fetch_target_db_instances(
+        self,
+        blue_green_deployment: BlueGreenDeploymentTypeDef | None,
+    ) -> list[DBInstanceTypeDef]:
+        return self._fetch_blue_green_deployment_member_instances(
+            blue_green_deployment, "TargetMember"
         )
 
     @cached_property
@@ -128,7 +147,10 @@ class BlueGreenDeploymentManager:
         self.model.blue_green_deployment = self.aws_api.get_blue_green_deployment(
             self.model.db_instance_identifier
         )
-        return self.model.blue_green_deployment["Status"] == "AVAILABLE"
+        self.model.target_db_instances = self._fetch_target_db_instances(
+            self.model.blue_green_deployment
+        )
+        return self.model.is_blue_green_deployment_available()
 
     def _handle_wait_for_available(self, _: WaitForAvailableAction) -> None:
         wait_for(self._wait_for_available_condition, logger=self.logger)
@@ -145,7 +167,10 @@ class BlueGreenDeploymentManager:
         self.model.blue_green_deployment = self.aws_api.get_blue_green_deployment(
             self.model.db_instance_identifier
         )
-        return self.model.blue_green_deployment["Status"] == "SWITCHOVER_COMPLETED"
+        return (
+            self.model.blue_green_deployment
+            and self.model.blue_green_deployment["Status"] == "SWITCHOVER_COMPLETED"
+        )
 
     def _handle_wait_for_switchover_completed(
         self, _: WaitForSwitchoverCompletedAction
@@ -156,7 +181,6 @@ class BlueGreenDeploymentManager:
         self, _: DeleteSourceDBInstanceAction
     ) -> None:
         assert self.model
-        assert self.model.blue_green_deployment
         self.model.source_db_instances = self._fetch_source_db_instances(
             self.model.blue_green_deployment
         )
@@ -165,7 +189,6 @@ class BlueGreenDeploymentManager:
 
     def _wait_for_source_db_instances_deleted_condition(self) -> bool:
         assert self.model
-        assert self.model.blue_green_deployment
         self.model.source_db_instances = self._fetch_source_db_instances(
             self.model.blue_green_deployment
         )
@@ -174,7 +197,9 @@ class BlueGreenDeploymentManager:
     def _handle_wait_for_source_db_instances_deleted(
         self, _: WaitForSourceDBInstancesDeletedAction
     ) -> None:
-        wait_for(self._wait_for_source_db_instances_deleted_condition, logger=self.logger)
+        wait_for(
+            self._wait_for_source_db_instances_deleted_condition, logger=self.logger
+        )
 
     def _handle_delete(self, _: DeleteAction) -> None:
         assert self.model
