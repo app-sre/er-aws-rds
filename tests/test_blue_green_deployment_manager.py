@@ -241,7 +241,10 @@ def test_run_create_blue_green_deployment_with_no_target(
     ])
     if dry_run:
         mock_aws_api.create_blue_green_deployment.assert_not_called()
+        mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     else:
+        mock_logging.info.assert_called_with("Waiting for condition to be met...")
+        assert mock_aws_api.get_blue_green_deployment.call_count == 2
         mock_aws_api.create_blue_green_deployment.assert_called_once_with(
             expected_params
         )
@@ -317,7 +320,9 @@ def test_run_create_blue_green_deployment_with_default_target(
     ])
     if dry_run:
         mock_aws_api.create_blue_green_deployment.assert_not_called()
+        mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     else:
+        assert mock_aws_api.get_blue_green_deployment.call_count == 2
         mock_aws_api.create_blue_green_deployment.assert_called_once_with(
             expected_params
         )
@@ -388,9 +393,14 @@ def test_run_when_create_blue_green_deployment_when_already_created(
 
     assert state == expected_state
     mock_aws_api.create_blue_green_deployment.assert_not_called()
-    mock_logging.info.assert_called_once_with(
-        f"Action wait_for_available: {expected_wait_for_available_action.model_dump_json()}"
-    )
+    mock_logging.info.assert_has_calls([
+        call(f"Action wait_for_available: {expected_wait_for_available_action.model_dump_json()}")
+    ])
+    if dry_run:
+        mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
+    else:
+        mock_logging.info.assert_called_with("Waiting for condition to be met...")
+        assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
 @pytest.mark.parametrize("dry_run", [True, False])
@@ -472,10 +482,13 @@ def test_run_when_switchover(
     ])
     if dry_run:
         mock_aws_api.switchover_blue_green_deployment.assert_not_called()
+        mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     else:
+        mock_logging.info.assert_called_with("Waiting for condition to be met...")
         mock_aws_api.switchover_blue_green_deployment.assert_called_once_with(
             "some-bg-id"
         )
+        assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -517,9 +530,14 @@ def test_run_when_switchover_in_progress(
 
     assert state == expected_state
     mock_aws_api.switchover_blue_green_deployment.assert_not_called()
-    mock_logging.info.assert_called_once_with(
-        f"Action wait_for_switchover_completed: {expected_wait_for_switchover_action.model_dump_json()}"
-    )
+    mock_logging.info.assert_has_calls([
+        call(f"Action wait_for_switchover_completed: {expected_wait_for_switchover_action.model_dump_json()}")
+    ])
+    if dry_run:
+        mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
+    else:
+        mock_logging.info.assert_called_with("Waiting for condition to be met...")
+        assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -550,6 +568,7 @@ def test_run_when_delete_after_switchover(
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds-old",
             },
+            None,
         ],
         get_blue_green_deployment=[
             build_blue_green_deployment_response(
@@ -561,7 +580,8 @@ def test_run_when_delete_after_switchover(
                         "Status": "SWITCHOVER_COMPLETED",
                     }
                 ],
-            )
+            ),
+            None,
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
     )
@@ -599,7 +619,6 @@ def test_run_when_delete_after_switchover(
         call("test-rds"),
         call("some-arn-old"),
     ])
-    mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     mock_logging.info.assert_has_calls([
         call(
             f"Action delete_source_db_instance: {expected_delete_source_db_instance_action.model_dump_json()}"
@@ -611,13 +630,18 @@ def test_run_when_delete_after_switchover(
         call(
             f"Action wait_for_deleted: {expected_wait_for_deleted_action.model_dump_json()}"
         ),
-    ])
+    ], any_order=True)
     if dry_run:
+        assert mock_aws_api.get_db_instance.call_count == 2
         mock_aws_api.delete_db_instance.assert_not_called()
         mock_aws_api.delete_blue_green_deployment.assert_not_called()
+        mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     else:
+        mock_logging.info.assert_called_with("Waiting for condition to be met...")
+        assert mock_aws_api.get_db_instance.call_count == 3
         mock_aws_api.delete_db_instance.assert_called_once_with("test-rds-old")
         mock_aws_api.delete_blue_green_deployment.assert_called_once_with("some-bg-id")
+        assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -656,6 +680,7 @@ def test_run_when_delete_after_switchover_and_source_deleted(
                     }
                 ],
             ),
+            None
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
     )
@@ -683,7 +708,6 @@ def test_run_when_delete_after_switchover_and_source_deleted(
         call("test-rds"),
         call("some-arn-old"),
     ])
-    mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     mock_logging.info.assert_has_calls([
         call(f"Action delete: {expected_delete_action.model_dump_json()}"),
         call(
@@ -693,8 +717,11 @@ def test_run_when_delete_after_switchover_and_source_deleted(
     mock_aws_api.delete_db_instance.assert_not_called()
     if dry_run:
         mock_aws_api.delete_blue_green_deployment.assert_not_called()
+        mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     else:
+        mock_logging.info.assert_called_with("Waiting for condition to be met...")
         mock_aws_api.delete_blue_green_deployment.assert_called_once_with("some-bg-id")
+        assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -716,7 +743,8 @@ def test_run_when_delete_without_switchover(
         mock_aws_api,
         get_db_instance=[DEFAULT_RDS_INSTANCE, DEFAULT_RDS_INSTANCE],
         get_blue_green_deployment=[
-            build_blue_green_deployment_response(status="AVAILABLE")
+            build_blue_green_deployment_response(status="AVAILABLE"),
+            None
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
     )
@@ -740,7 +768,6 @@ def test_run_when_delete_without_switchover(
     state = manager.run()
 
     assert state == expected_state
-    mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     mock_logging.info.assert_has_calls([
         call(
             f"Action delete_without_switchover: {expected_delete_without_switchover_action.model_dump_json()}"
@@ -752,11 +779,14 @@ def test_run_when_delete_without_switchover(
     mock_aws_api.delete_db_instance.assert_not_called()
     if dry_run:
         mock_aws_api.delete_blue_green_deployment.assert_not_called()
+        mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     else:
+        mock_logging.info.assert_called_with("Waiting for condition to be met...")
         mock_aws_api.delete_blue_green_deployment.assert_called_once_with(
             "some-bg-id",
             delete_target=True,
         )
+        assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -831,11 +861,13 @@ def test_run_when_all_in_one_config(
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds-old",
             },
+            None,
         ],
         get_blue_green_deployment=[
             None,
             build_blue_green_deployment_response(status="AVAILABLE"),
             build_blue_green_deployment_response(status="SWITCHOVER_COMPLETED"),
+            None,
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
     )
@@ -920,13 +952,14 @@ def test_run_when_all_in_one_config(
         call(
             f"Action wait_for_deleted: {expected_wait_for_deleted_action.model_dump_json()}"
         ),
-    ])
+    ], any_order=True)
     if dry_run:
         mock_aws_api.create_blue_green_deployment.assert_not_called()
         mock_aws_api.switchover_blue_green_deployment.assert_not_called()
         mock_aws_api.delete_db_instance.assert_not_called()
         mock_aws_api.delete_blue_green_deployment.assert_not_called()
     else:
+        mock_logging.info.assert_called_with("Waiting for condition to be met...")
         mock_aws_api.create_blue_green_deployment.assert_called_once_with(
             expected_params
         )
