@@ -6,6 +6,7 @@ from mypy_boto3_rds.type_defs import (
     BlueGreenDeploymentTypeDef,
     DBInstanceTypeDef,
     DBParameterGroupTypeDef,
+    UpgradeTargetTypeDef,
 )
 from pydantic import BaseModel, model_validator
 
@@ -38,6 +39,7 @@ class BlueGreenDeploymentModel(BaseModel):
     source_db_instances: list[DBInstanceTypeDef] = []
     target_db_instances: list[DBInstanceTypeDef] = []
     tags: dict[str, str] | None = None
+    valid_upgrade_targets: dict[str, UpgradeTargetTypeDef] = {}
 
     @model_validator(mode="after")
     def _init_state(self) -> Self:
@@ -100,6 +102,21 @@ class BlueGreenDeploymentModel(BaseModel):
     def _validate_backup_retention_period(self) -> Self:
         if self.db_instance and self.db_instance["BackupRetentionPeriod"] <= 0:
             raise ValueError("backup_retention_period must be greater than 0")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_version_upgrade(self) -> Self:
+        assert self.db_instance
+        target_engine_version = (
+            self.config.target.engine_version
+            if self.config.target and self.config.target.engine_version
+            else self.db_instance["EngineVersion"]
+        )
+        if target_engine_version not in self.valid_upgrade_targets:
+            valid_versions = ", ".join(self.valid_upgrade_targets)
+            raise ValueError(
+                f"target engine_version {target_engine_version} is not valid, valid versions: {valid_versions}"
+            )
         return self
 
     def plan_actions(self) -> list[BaseAction]:
