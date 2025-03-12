@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock, create_autospec, patch
 
 import pytest
+from botocore.exceptions import ClientError
 
 from hooks.utils.aws_api import AWSApi
 from hooks.utils.models import CreateBlueGreenDeploymentParams
@@ -90,7 +91,15 @@ def test_get_db_instance(mock_rds_client: Mock) -> None:
 
 def test_get_db_instance_not_found(mock_rds_client: Mock) -> None:
     """Test get_db_instance"""
-    mock_rds_client.describe_db_instances.return_value = {"DBInstances": []}
+    mock_rds_client.exceptions.DBInstanceNotFoundFault = ClientError
+    mock_rds_client.describe_db_instances.side_effect = ClientError(
+        error_response={
+            "Error": {
+                "Code": "DBInstanceNotFound",
+            },
+        },
+        operation_name="DescribeDBInstances",
+    )
     aws_api = AWSApi()
 
     result = aws_api.get_db_instance("identifier")

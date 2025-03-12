@@ -168,7 +168,7 @@ class BlueGreenDeploymentManager:
             self.model.db_instance_identifier
         )
         return (
-            self.model.blue_green_deployment
+            self.model.blue_green_deployment is not None
             and self.model.blue_green_deployment["Status"] == "SWITCHOVER_COMPLETED"
         )
 
