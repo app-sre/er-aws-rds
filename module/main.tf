@@ -41,9 +41,10 @@ resource "aws_iam_role_policy_attachment" "this" {
 }
 
 locals {
-  parameter_groups        = { for pg in try(var.parameter_groups, []) : pg.name => pg }
-  parameter_group_name    = try(var.rds_instance.parameter_group_name, null)
-  parameter_group_managed = local.parameter_group_name != null ? contains(keys(local.parameter_groups), local.parameter_group_name) : false
+  parameter_groups             = { for pg in try(var.parameter_groups, []) : pg.name => pg }
+  parameter_group_name         = try(var.rds_instance.parameter_group_name, null)
+  parameter_group_managed      = local.parameter_group_name != null ? contains(keys(local.parameter_groups), local.parameter_group_name) : false
+  aws_db_instance_needs_engine = try(var.rds_instance.replicate_source_db, null) == null && try(var.rds_instance.snapshot_identifier, null) == null ? true : false
 }
 
 resource "aws_db_parameter_group" "this" {
@@ -115,7 +116,7 @@ resource "aws_db_instance" "this" {
   domain_iam_role_name                  = try(var.rds_instance.domain_iam_role_name, null)
   domain_ou                             = try(var.rds_instance.domain_ou, null)
   enabled_cloudwatch_logs_exports       = try(var.rds_instance.enabled_cloudwatch_logs_exports, null)
-  engine                                = try(var.rds_instance.engine, null)
+  engine                                = local.aws_db_instance_needs_engine ? var.rds_instance.engine : null
   engine_version                        = try(var.rds_instance.engine_version, null)
   final_snapshot_identifier             = try(var.rds_instance.final_snapshot_identifier, null)
   iam_database_authentication_enabled   = try(var.rds_instance.iam_database_authentication_enabled, null)

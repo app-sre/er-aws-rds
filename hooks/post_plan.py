@@ -89,7 +89,7 @@ class RDSPlanValidator:
         for u in self.aws_db_instance_creations:
             if not u.change or not u.change.after:
                 continue
-            engine = u.change.after["engine"]
+            engine = self.input.data.engine
             version = u.change.after["engine_version"]
             if not self.aws_api.is_rds_engine_version_available(
                 engine=engine, version=version
