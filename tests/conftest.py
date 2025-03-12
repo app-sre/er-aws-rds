@@ -122,9 +122,11 @@ DEFAULT_RDS_INSTANCE: DBInstanceTypeDef = {
     "AllocatedStorage": 20,
     "StorageThroughput": 125,
     "DBInstanceStatus": "available",
+    "DeletionProtection": False,
+    "BackupRetentionPeriod": 7,
 }
 
-DEFAULT_TARGET_RDS_INSTANCE: DBInstanceTypeDef = {
+DEFAULT_TARGET_RDS_INSTANCE: DBInstanceTypeDef = DEFAULT_RDS_INSTANCE | {
     "DBInstanceArn": "some-arn-new",
     "DBInstanceStatus": "available",
     "DBInstanceIdentifier": "test-rds-new",
