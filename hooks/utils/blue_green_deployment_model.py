@@ -27,6 +27,7 @@ from hooks.utils.models import (
     WaitForSourceDBInstancesDeletedAction,
     WaitForSwitchoverCompletedAction,
 )
+from hooks.utils.semantic import parse_semver
 
 
 class BlueGreenDeploymentModel(BaseModel):
@@ -106,17 +107,36 @@ class BlueGreenDeploymentModel(BaseModel):
 
     @model_validator(mode="after")
     def _validate_version_upgrade(self) -> Self:
-        assert self.db_instance
-        target_engine_version = (
-            self.config.target.engine_version
-            if self.config.target and self.config.target.engine_version
-            else self.db_instance["EngineVersion"]
-        )
+        target_engine_version = self._get_target_engine_version()
         if target_engine_version not in self.valid_upgrade_targets:
             valid_versions = ", ".join(self.valid_upgrade_targets)
             raise ValueError(
                 f"target engine_version {target_engine_version} is not valid, valid versions: {valid_versions}"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_supported_engine_version(self) -> Self:
+        target_engine_version = self._get_target_engine_version()
+        upgrade_target = self.valid_upgrade_targets[target_engine_version]
+        assert self.db_instance
+        engine = self.db_instance["Engine"]
+        engine_version = self.db_instance["EngineVersion"]
+        match engine:
+            case "postgres":
+                if upgrade_target[
+                    "IsMajorVersionUpgrade"
+                ] and not self._is_postgres_version_supported(engine_version):
+                    raise ValueError(
+                        f"postgres engine_version {engine_version} is not supported for blue/green deployment"
+                    )
+            case "mysql":
+                if not self._is_mysql_version_supported(engine_version):
+                    raise ValueError(
+                        f"mysql engine_version {engine_version} is not supported for blue/green deployment"
+                    )
+            case _:
+                raise ValueError(f"Unsupported engine: {engine}")
         return self
 
     def plan_actions(self) -> list[BaseAction]:
@@ -144,6 +164,65 @@ class BlueGreenDeploymentModel(BaseModel):
             and all(
                 db["DBInstanceStatus"] == "available" for db in self.target_db_instances
             )
+        )
+
+    def _get_target_engine_version(self) -> str:
+        if self.config.target and self.config.target.engine_version:
+            return self.config.target.engine_version
+        assert self.db_instance
+        return self.db_instance["EngineVersion"]
+
+    @staticmethod
+    def _is_mysql_version_supported(version: str) -> bool:
+        """
+        Validate supported mysql version.
+
+        Major and minor version must exactly match.
+
+        reference:
+        * https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RDS_Fea_Regions_DB-eng.Feature.BlueGreenDeployments.html
+        """
+        target_version = parse_semver(version)
+        supported_versions = [
+            parse_semver(v)
+            for v in [
+                "5.7",
+                "8.0",
+                "8.4",
+            ]
+        ]
+        return any(
+            target_version.major == v.major and target_version.minor == v.minor
+            for v in supported_versions
+        )
+
+    @staticmethod
+    def _is_postgres_version_supported(version: str) -> bool:
+        """
+        Validate supported postgres version for Major version upgrade.
+
+        With matched major version, minor version must be greater than or equal to supported one.
+
+        reference:
+        * https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/blue-green-deployments-replication-type.html
+        """
+        target_version = parse_semver(version)
+        min_supported_versions = [
+            parse_semver(v)
+            for v in [
+                "11.21",
+                "12.16",
+                "13.12",
+                "14.9",
+                "15.4",
+                "16.1",
+            ]
+        ]
+        if target_version >= min_supported_versions[-1]:
+            return True
+        return any(
+            target_version.major == v.major and target_version.minor >= v.minor
+            for v in min_supported_versions
         )
 
     def _no_changes(self) -> bool:
