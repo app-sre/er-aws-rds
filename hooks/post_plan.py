@@ -146,7 +146,10 @@ class RDSPlanValidator:
             self.errors.append("Deletions and Creations mismatch")
 
     def _validate_no_changes_when_blue_green_deployment_enabled(self) -> None:
-        if self.input.data.blue_green_deployment is None or not self.input.data.blue_green_deployment.enabled:
+        if (
+            self.input.data.blue_green_deployment is None
+            or not self.input.data.blue_green_deployment.enabled
+        ):
             return
         if self.resource_creations or self.resource_updates or self.resource_deletions:
             self.errors.append("No changes allowed when Blue/Green Deployment enabled.")
