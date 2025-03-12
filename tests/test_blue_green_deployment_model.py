@@ -115,3 +115,159 @@ def test_validate_version_upgrade_when_target_not_set() -> None:
                 "16.3": {"EngineVersion": "16.3", "IsMajorVersionUpgrade": True},
             },
         )
+
+
+@pytest.mark.parametrize(
+    "engine_version",
+    [
+        "5.5.1",
+        "5.6.2",
+    ],
+)
+def test_validate_supported_engine_version_for_mysql(
+    engine_version: str,
+) -> None:
+    """Test validate supported engine version for mysql"""
+    with pytest.raises(
+        ValidationError,
+        match=rf".*mysql engine_version {engine_version} is not supported for blue/green deployment.*",
+    ):
+        BlueGreenDeploymentModel(
+            db_instance_identifier="test-rds",
+            state=State.INIT,
+            config=build_blue_green_deployment(
+                target=BlueGreenDeploymentTarget(engine_version="8.4.4")
+            ),
+            db_instance=DEFAULT_RDS_INSTANCE
+            | {"EngineVersion": engine_version, "Engine": "mysql"},
+            valid_upgrade_targets={
+                "8.4.4": {"EngineVersion": "8.4.4", "IsMajorVersionUpgrade": True},
+            },
+        )
+
+
+@pytest.mark.parametrize(
+    "engine_version",
+    [
+        "5.7.44",
+        "8.0.32",
+        "8.4.3",
+    ],
+)
+def test_validate_supported_engine_version_for_mysql_ok(
+    engine_version: str,
+) -> None:
+    """Test validate supported engine version for mysql OK"""
+    model = BlueGreenDeploymentModel(
+        db_instance_identifier="test-rds",
+        state=State.INIT,
+        config=build_blue_green_deployment(
+            target=BlueGreenDeploymentTarget(engine_version="8.4.4")
+        ),
+        db_instance=DEFAULT_RDS_INSTANCE
+        | {"EngineVersion": engine_version, "Engine": "mysql"},
+        valid_upgrade_targets={
+            "8.4.4": {"EngineVersion": "8.4.4", "IsMajorVersionUpgrade": True},
+        },
+    )
+    assert model is not None
+
+
+@pytest.mark.parametrize(
+    "engine_version",
+    [
+        "16.0",
+        "15.3",
+        "14.8",
+        "13.11",
+        "12.15",
+        "11.20",
+    ],
+)
+def test_validate_supported_engine_version_for_postgres_major_version_upgrade(
+    engine_version: str,
+) -> None:
+    """Test validate supported engine version for postgres major version upgrade"""
+    with pytest.raises(
+        ValidationError,
+        match=rf".*postgres engine_version {engine_version} is not supported for blue/green deployment.*",
+    ):
+        BlueGreenDeploymentModel(
+            db_instance_identifier="test-rds",
+            state=State.INIT,
+            config=build_blue_green_deployment(
+                target=BlueGreenDeploymentTarget(engine_version="17.1")
+            ),
+            db_instance=DEFAULT_RDS_INSTANCE | {"EngineVersion": engine_version},
+            valid_upgrade_targets={
+                "17.1": {"EngineVersion": "17.1", "IsMajorVersionUpgrade": True},
+            },
+        )
+
+
+@pytest.mark.parametrize(
+    "engine_version",
+    [
+        "17.1",
+        "16.1",
+        "16.2",
+        "15.4",
+        "15.5",
+        "14.9",
+        "14.10",
+        "13.12",
+        "13.13",
+        "12.16",
+        "12.17",
+        "11.21",
+        "11.22",
+    ],
+)
+def test_validate_supported_engine_version_for_postgres_major_version_upgrade_ok(
+    engine_version: str,
+) -> None:
+    """Test validate supported engine version for postgres major version upgrade ok"""
+    model = BlueGreenDeploymentModel(
+        db_instance_identifier="test-rds",
+        state=State.INIT,
+        config=build_blue_green_deployment(
+            target=BlueGreenDeploymentTarget(engine_version="18.0")
+        ),
+        db_instance=DEFAULT_RDS_INSTANCE | {"EngineVersion": engine_version},
+        valid_upgrade_targets={
+            "18.0": {"EngineVersion": "18.0", "IsMajorVersionUpgrade": True},
+        },
+    )
+    assert model is not None
+
+
+@pytest.mark.parametrize(
+    "engine_version",
+    [
+        "16.0",
+        "15.3",
+        "14.8",
+        "13.11",
+        "12.15",
+        "11.20",
+    ],
+)
+def test_validate_supported_engine_version_for_postgres_non_major_version_upgrade(
+    engine_version: str,
+) -> None:
+    """Test validate supported engine version for postgres non-major version upgrade"""
+    model = BlueGreenDeploymentModel(
+        db_instance_identifier="test-rds",
+        state=State.INIT,
+        config=build_blue_green_deployment(
+            target=BlueGreenDeploymentTarget(engine_version=engine_version)
+        ),
+        db_instance=DEFAULT_RDS_INSTANCE | {"EngineVersion": engine_version},
+        valid_upgrade_targets={
+            engine_version: {
+                "EngineVersion": engine_version,
+                "IsMajorVersionUpgrade": False,
+            },
+        },
+    )
+    assert model is not None
