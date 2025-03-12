@@ -79,3 +79,39 @@ def test_validate_backup_retention_period() -> None:
             config=build_blue_green_deployment(),
             db_instance=DEFAULT_RDS_INSTANCE | {"BackupRetentionPeriod": 0},
         )
+
+
+def test_validate_version_upgrade_when_target_set() -> None:
+    """Test validate version upgrade when target set"""
+    with pytest.raises(
+        ValidationError,
+        match=r".*target engine_version 16.1 is not valid, valid versions: 16.3.*",
+    ):
+        BlueGreenDeploymentModel(
+            db_instance_identifier="test-rds",
+            state=State.INIT,
+            config=build_blue_green_deployment(
+                target=BlueGreenDeploymentTarget(engine_version="16.1")
+            ),
+            db_instance=DEFAULT_RDS_INSTANCE,
+            valid_upgrade_targets={
+                "16.3": {"EngineVersion": "16.3", "IsMajorVersionUpgrade": True},
+            },
+        )
+
+
+def test_validate_version_upgrade_when_target_not_set() -> None:
+    """Test validate version upgrade when target not set"""
+    with pytest.raises(
+        ValidationError,
+        match=r".*target engine_version 15.7 is not valid, valid versions: 16.3.*",
+    ):
+        BlueGreenDeploymentModel(
+            db_instance_identifier="test-rds",
+            state=State.INIT,
+            config=build_blue_green_deployment(),
+            db_instance=DEFAULT_RDS_INSTANCE,
+            valid_upgrade_targets={
+                "16.3": {"EngineVersion": "16.3", "IsMajorVersionUpgrade": True},
+            },
+        )

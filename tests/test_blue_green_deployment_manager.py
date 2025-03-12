@@ -8,6 +8,7 @@ from mypy_boto3_rds.type_defs import (
     DBInstanceTypeDef,
     DBParameterGroupTypeDef,
     SwitchoverDetailTypeDef,
+    UpgradeTargetTypeDef,
 )
 from pydantic import ValidationError
 
@@ -32,6 +33,7 @@ from tests.conftest import (
     DEFAULT_TARGET,
     DEFAULT_TARGET_PARAMETER_GROUP,
     DEFAULT_TARGET_RDS_INSTANCE,
+    DEFAULT_VALID_UPGRADE_TARGETS,
     input_object,
 )
 
@@ -98,6 +100,10 @@ def setup_aws_api_side_effects(
     get_db_instance: list[DBInstanceTypeDef | None] | None = None,
     get_blue_green_deployment: list[BlueGreenDeploymentTypeDef | None] | None = None,
     get_db_parameter_group: list[DBParameterGroupTypeDef | None] | None = None,
+    get_blue_green_deployment_valid_upgrade_targets: list[
+        dict[str, UpgradeTargetTypeDef]
+    ]
+    | None = None,
 ) -> None:
     """Setup AWSApi side effects"""
     if get_db_instance is not None:
@@ -106,6 +112,10 @@ def setup_aws_api_side_effects(
         mock_aws_api.get_blue_green_deployment.side_effect = get_blue_green_deployment
     if get_db_parameter_group is not None:
         mock_aws_api.get_db_parameter_group.side_effect = get_db_parameter_group
+    if get_blue_green_deployment_valid_upgrade_targets is not None:
+        mock_aws_api.get_blue_green_deployment_valid_upgrade_targets.side_effect = (
+            get_blue_green_deployment_valid_upgrade_targets
+        )
 
 
 @pytest.mark.parametrize("dry_run", [True, False])
@@ -172,6 +182,7 @@ def test_run_create_blue_green_deployment_with_no_target(
             None,
             build_blue_green_deployment_response(status="AVAILABLE"),
         ],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     expected_params = CreateBlueGreenDeploymentParams(
         name="test-rds",
@@ -245,6 +256,7 @@ def test_run_create_blue_green_deployment_with_default_target(
             build_blue_green_deployment_response(status="AVAILABLE"),
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     expected_params = CreateBlueGreenDeploymentParams(
         name="test-rds",
@@ -354,6 +366,7 @@ def test_run_when_create_blue_green_deployment_when_already_created(
             build_blue_green_deployment_response(status="AVAILABLE"),
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(enabled=True)
     expected_wait_for_available_action = WaitForAvailableAction(
@@ -410,6 +423,7 @@ def test_run_when_blue_green_deployment_available_but_target_instance_not_availa
             build_blue_green_deployment_response(status="AVAILABLE"),
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(enabled=True)
     expected_wait_for_available_action = WaitForAvailableAction(
@@ -452,6 +466,7 @@ def test_run_when_create_blue_green_deployment_with_parameter_group_not_found(
         get_db_instance=[DEFAULT_RDS_INSTANCE],
         get_db_parameter_group=[None],
         get_blue_green_deployment=[None],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(enabled=True)
     manager = BlueGreenDeploymentManager(
@@ -496,6 +511,7 @@ def test_run_when_switchover(
             build_blue_green_deployment_response(status="SWITCHOVER_COMPLETED"),
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(enabled=True, switchover=True)
     expected_switchover_action = SwitchoverAction(
@@ -559,6 +575,7 @@ def test_run_when_switchover_in_progress(
             build_blue_green_deployment_response(status="SWITCHOVER_COMPLETED"),
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(enabled=True, switchover=True)
     expected_wait_for_switchover_action = WaitForSwitchoverCompletedAction(
@@ -605,22 +622,26 @@ def test_run_when_delete_after_switchover(
     setup_aws_api_side_effects(
         mock_aws_api,
         get_db_instance=[
-            DEFAULT_RDS_INSTANCE | {
+            DEFAULT_RDS_INSTANCE
+            | {
                 "DBInstanceArn": "some-arn-new",
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds",
             },
-            DEFAULT_RDS_INSTANCE | {
+            DEFAULT_RDS_INSTANCE
+            | {
                 "DBInstanceArn": "some-arn-old",
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds-old",
             },
-            DEFAULT_RDS_INSTANCE | {
+            DEFAULT_RDS_INSTANCE
+            | {
                 "DBInstanceArn": "some-arn-new",
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds",
             },
-            DEFAULT_RDS_INSTANCE | {
+            DEFAULT_RDS_INSTANCE
+            | {
                 "DBInstanceArn": "some-arn-old",
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds-old",
@@ -641,6 +662,7 @@ def test_run_when_delete_after_switchover(
             None,
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(
         enabled=True, switchover=True, delete=True
@@ -740,6 +762,7 @@ def test_run_when_delete_after_switchover_and_source_deleted(
             None,
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(
         enabled=True, switchover=True, delete=True
@@ -808,6 +831,7 @@ def test_run_when_delete_without_switchover(
             None,
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(
         enabled=True, switchover=False, delete=True
@@ -877,6 +901,7 @@ def test_run_when_no_changes_and_no_blue_green_deployment(
         get_db_instance=[DEFAULT_RDS_INSTANCE],
         get_blue_green_deployment=[None],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(
         enabled=True,
@@ -932,6 +957,7 @@ def test_run_when_all_in_one_config(
             None,
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
     )
     additional_data = build_blue_green_deployment_data(
         enabled=True,

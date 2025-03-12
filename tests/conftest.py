@@ -1,6 +1,10 @@
 from typing import Any
 
-from mypy_boto3_rds.type_defs import DBInstanceTypeDef, DBParameterGroupTypeDef
+from mypy_boto3_rds.type_defs import (
+    DBInstanceTypeDef,
+    DBParameterGroupTypeDef,
+    UpgradeTargetTypeDef,
+)
 
 from er_aws_rds.input import AppInterfaceInput
 
@@ -116,6 +120,7 @@ DEFAULT_RDS_INSTANCE: DBInstanceTypeDef = {
         }
     ],
     "Iops": 3000,
+    "Engine": "postgres",
     "EngineVersion": "15.7",
     "DBInstanceClass": "db.t4g.micro",
     "StorageType": "gp3",
@@ -124,6 +129,17 @@ DEFAULT_RDS_INSTANCE: DBInstanceTypeDef = {
     "DBInstanceStatus": "available",
     "DeletionProtection": False,
     "BackupRetentionPeriod": 7,
+}
+
+DEFAULT_VALID_UPGRADE_TARGETS: dict[str, UpgradeTargetTypeDef] = {
+    "15.7": {
+        "EngineVersion": "15.7",
+        "IsMajorVersionUpgrade": False,
+    },
+    "16.3": {
+        "EngineVersion": "16.3",
+        "IsMajorVersionUpgrade": True,
+    },
 }
 
 DEFAULT_TARGET_RDS_INSTANCE: DBInstanceTypeDef = DEFAULT_RDS_INSTANCE | {

@@ -64,6 +64,14 @@ class BlueGreenDeploymentManager:
     def _build_model(self, config: BlueGreenDeployment) -> BlueGreenDeploymentModel:
         db_instance_identifier = self.app_interface_input.provision.identifier
         db_instance = self.aws_api.get_db_instance(db_instance_identifier)
+        valid_upgrade_targets = (
+            self.aws_api.get_blue_green_deployment_valid_upgrade_targets(
+                engine=db_instance["Engine"],
+                version=db_instance["EngineVersion"],
+            )
+            if db_instance
+            else {}
+        )
         target_parameter_group_name = (
             config.target.parameter_group.name
             if config.target and config.target.parameter_group
@@ -84,6 +92,7 @@ class BlueGreenDeploymentManager:
             state=State.INIT,
             config=config,
             db_instance=db_instance,
+            valid_upgrade_targets=valid_upgrade_targets,
             target_db_parameter_group=target_db_parameter_group,
             blue_green_deployment=blue_green_deployment,
             source_db_instances=source_db_instances,

@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
-from unittest.mock import Mock, create_autospec, patch
+from unittest.mock import Mock, call, create_autospec, patch
 
 import pytest
 from botocore.exceptions import ClientError
@@ -68,6 +68,115 @@ def test_is_rds_engine_version_available(
     result = aws_api.is_rds_engine_version_available("postgres", "16.1")
 
     assert result == expected
+
+
+def test_get_rds_valid_upgrade_targets(
+    mock_rds_client: Mock,
+) -> None:
+    """Test get_rds_valid_upgrade_targets"""
+    mock_rds_client.describe_db_engine_versions.return_value = {
+        "DBEngineVersions": [
+            {
+                "ValidUpgradeTarget": [
+                    {"EngineVersion": "16.1"},
+                ]
+            }
+        ]
+    }
+    aws_api = AWSApi()
+
+    result = aws_api.get_rds_valid_upgrade_targets("postgres", "15.7")
+
+    assert result == {
+        "16.1": {
+            "EngineVersion": "16.1",
+        }
+    }
+    mock_rds_client.describe_db_engine_versions.assert_called_once_with(
+        Engine="postgres",
+        EngineVersion="15.7",
+        IncludeAll=True,
+    )
+
+
+def test_get_blue_green_deployment_valid_upgrade_targets(
+    mock_rds_client: Mock,
+) -> None:
+    """Test get_blue_green_deployment_valid_upgrade_targets"""
+    expected_result = {
+        "15.7": {
+            "Engine": "postgres",
+            "EngineVersion": "15.7",
+            "IsMajorVersionUpgrade": False,
+        },
+        "15.8": {
+            "Engine": "postgres",
+            "EngineVersion": "15.8",
+            "IsMajorVersionUpgrade": False,
+        },
+        "16.3": {
+            "Engine": "postgres",
+            "EngineVersion": "16.3",
+            "IsMajorVersionUpgrade": True,
+        },
+    }
+    mock_rds_client.describe_db_engine_versions.side_effect = [
+        {
+            "DBEngineVersions": [
+                {
+                    "EngineVersion": "15.7",
+                    "ValidUpgradeTarget": [
+                        {
+                            "Engine": "postgres",
+                            "EngineVersion": "15.8",
+                            "IsMajorVersionUpgrade": False,
+                        },
+                        {
+                            "Engine": "postgres",
+                            "EngineVersion": "16.1",
+                            "IsMajorVersionUpgrade": True,
+                        },
+                        {
+                            "Engine": "postgres",
+                            "EngineVersion": "16.3",
+                            "IsMajorVersionUpgrade": True,
+                        },
+                    ],
+                }
+            ]
+        },
+        {
+            "DBEngineVersions": [
+                {
+                    "EngineVersion": "15.7",
+                },
+                {
+                    "EngineVersion": "15.8",
+                },
+                {
+                    "EngineVersion": "16.3",
+                },
+            ]
+        },
+    ]
+    aws_api = AWSApi()
+
+    result = aws_api.get_blue_green_deployment_valid_upgrade_targets("postgres", "15.7")
+
+    assert result == expected_result
+    mock_rds_client.describe_db_engine_versions.assert_has_calls([
+        call(
+            Engine="postgres",
+            EngineVersion="15.7",
+            IncludeAll=True,
+        ),
+        call(
+            Engine="postgres",
+            Filters=[
+                {"Name": "engine-version", "Values": ["15.7", "15.8", "16.1", "16.3"]}
+            ],
+        ),
+    ])
 
 
 def test_get_db_instance(mock_rds_client: Mock) -> None:

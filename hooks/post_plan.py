@@ -98,15 +98,15 @@ class RDSPlanValidator:
             current_version = u.change.before["engine_version"]
             desired_version = u.change.after["engine_version"]
             if current_version != desired_version:
-                valid_update_versions = self.aws_api.get_rds_valid_update_versions(
+                valid_upgrade_targets = self.aws_api.get_rds_valid_upgrade_targets(
                     u.change.before["engine"], current_version
                 )
-                if desired_version not in valid_update_versions:
+                if desired_version not in valid_upgrade_targets:
                     self.errors.append(
                         "Engine version cannot be updated. "
                         f"Current_version: {current_version}, "
                         f"Desired_version: {desired_version}, "
-                        f"Valid update versions: {valid_update_versions}"
+                        f"Valid update versions: {valid_upgrade_targets.keys()}"
                     )
 
                 # Major version upgrade validation
