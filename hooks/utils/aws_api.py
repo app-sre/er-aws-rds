@@ -61,7 +61,12 @@ class AWSApi:
 
     def get_db_instance(self, identifier: str) -> DBInstanceTypeDef | None:
         """Get DB instance info"""
-        data = self.rds_client.describe_db_instances(DBInstanceIdentifier=identifier)
+        try:
+            data = self.rds_client.describe_db_instances(
+                DBInstanceIdentifier=identifier
+            )
+        except self.rds_client.exceptions.DBInstanceNotFoundFault:
+            return None
         return data["DBInstances"][0] if data["DBInstances"] else None
 
     def delete_db_instance(self, identifier: str) -> None:
