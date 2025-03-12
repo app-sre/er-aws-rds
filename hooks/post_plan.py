@@ -69,17 +69,14 @@ class RDSPlanValidator:
 
     @property
     def aws_db_instance_creations(self) -> list[ResourceChange]:
-        "Gets the RDS isntance creations"
         return [c for c in self.resource_creations if c.type == "aws_db_instance"]
 
     @property
     def aws_db_instance_updates(self) -> list[ResourceChange]:
-        "Gets the RDS isntance updates"
         return [c for c in self.resource_updates if c.type == "aws_db_instance"]
 
     @property
     def aws_db_instance_deletions(self) -> list[ResourceChange]:
-        "Gets the RDS instance deletions"
         return [c for c in self.resource_deletions if c.type == "aws_db_instance"]
 
     def _validate_version_on_create(self) -> None:
@@ -148,12 +145,20 @@ class RDSPlanValidator:
         ):
             self.errors.append("Deletions and Creations mismatch")
 
-    def validate(self) -> bool:
-        """Validate method"""
+    def _validate_no_changes_when_blue_green_deployment_enabled(self) -> None:
+        if self.input.data.blue_green_deployment is None or not self.input.data.blue_green_deployment.enabled:
+            return
+        if self.resource_creations or self.resource_updates or self.resource_deletions:
+            self.errors.append("No changes allowed when Blue/Green Deployment enabled.")
+
+    def validate(self) -> list[str]:
+        """Validate method, return validation errors"""
+        self.errors.clear()
         self._validate_version_on_create()
         self._validate_version_upgrade()
         self._validate_deletion_protection_not_enabled_on_destroy()
-        return not self.errors
+        self._validate_no_changes_when_blue_green_deployment_enabled()
+        return self.errors
 
 
 if __name__ == "__main__":
@@ -171,9 +176,9 @@ if __name__ == "__main__":
     logger.info("Running RDS terraform plan validation")
     parser = TerraformJsonPlanParser(plan_path=terraform_plan_json)
     validator = RDSPlanValidator(parser.plan, app_interface_input)
-    if not validator.validate():
-        logger.error(validator.errors)
+    if errors := validator.validate():
+        logger.error(errors)
         sys.exit(1)
     else:
-        logger.info("Validation ended succesfully")
+        logger.info("Validation ended successfully")
         sys.exit(0)
