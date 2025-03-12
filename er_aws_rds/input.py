@@ -133,7 +133,7 @@ class Rds(RdsAppInterface):
 
     model_config = ConfigDict(extra="allow")
     identifier: str
-    engine: str | None = None
+    engine: str = "postgres"
     allow_major_version_upgrade: bool | None = False
     availability_zone: str | None = None
     monitoring_interval: int | None = None
@@ -191,12 +191,15 @@ class Rds(RdsAppInterface):
 
     @model_validator(mode="after")
     def unset_replica_or_snapshot_not_allowed_attrs(self) -> "Rds":
-        """Some attributes are not allowed if the instance is a replica or needs to be created from a snapshot"""
+        """
+        Some attributes are not allowed if the instance is a read replica or is created from a snapshot.
+
+        engine is not removed because it's needed in the plan validation.
+        """
         if self.replica_source or self.replicate_source_db or self.snapshot_identifier:
             self.username = None
             self.password = None
             self.name = None
-            self.engine = None
             self.allocated_storage = None
         return self
 
