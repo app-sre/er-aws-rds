@@ -90,6 +90,18 @@ class BlueGreenDeploymentModel(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _validate_deletion_protection(self) -> Self:
+        if self.db_instance and self.db_instance["DeletionProtection"]:
+            raise ValueError("deletion_protection must be disabled")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_backup_retention_period(self) -> Self:
+        if self.db_instance and self.db_instance["BackupRetentionPeriod"] <= 0:
+            raise ValueError("backup_retention_period must be greater than 0")
+        return self
+
     def plan_actions(self) -> list[BaseAction]:
         """Plan Actions"""
         state = self.state

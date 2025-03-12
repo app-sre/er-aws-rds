@@ -605,22 +605,22 @@ def test_run_when_delete_after_switchover(
     setup_aws_api_side_effects(
         mock_aws_api,
         get_db_instance=[
-            {
+            DEFAULT_RDS_INSTANCE | {
                 "DBInstanceArn": "some-arn-new",
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds",
             },
-            {
+            DEFAULT_RDS_INSTANCE | {
                 "DBInstanceArn": "some-arn-old",
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds-old",
             },
-            {
+            DEFAULT_RDS_INSTANCE | {
                 "DBInstanceArn": "some-arn-new",
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds",
             },
-            {
+            DEFAULT_RDS_INSTANCE | {
                 "DBInstanceArn": "some-arn-old",
                 "DBInstanceStatus": "available",
                 "DBInstanceIdentifier": "test-rds-old",

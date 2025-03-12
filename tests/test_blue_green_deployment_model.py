@@ -53,3 +53,29 @@ def test_validate_target_parameter_group() -> None:
             db_instance=DEFAULT_RDS_INSTANCE,
             target_db_parameter_group=None,
         )
+
+
+def test_validate_deletion_protection() -> None:
+    """Test validate deletion protection"""
+    with pytest.raises(
+        ValidationError, match=r".*deletion_protection must be disabled.*"
+    ):
+        BlueGreenDeploymentModel(
+            db_instance_identifier="test-rds",
+            state=State.INIT,
+            config=build_blue_green_deployment(),
+            db_instance=DEFAULT_RDS_INSTANCE | {"DeletionProtection": True},
+        )
+
+
+def test_validate_backup_retention_period() -> None:
+    """Test validate backup retention period"""
+    with pytest.raises(
+        ValidationError, match=r".*backup_retention_period must be greater than 0.*"
+    ):
+        BlueGreenDeploymentModel(
+            db_instance_identifier="test-rds",
+            state=State.INIT,
+            config=build_blue_green_deployment(),
+            db_instance=DEFAULT_RDS_INSTANCE | {"BackupRetentionPeriod": 0},
+        )
