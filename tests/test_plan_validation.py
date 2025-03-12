@@ -60,8 +60,8 @@ def test_validate_desired_version(
 
     plan = Plan.model_validate(new_instance_plan)
     validator = RDSPlanValidator(plan, input_object())
-    validator.validate()
-    assert validator.errors == expected_errors
+    errors = validator.validate()
+    assert errors == expected_errors
 
 
 def test_validate_deletion_protection_not_enabled_on_destroy() -> None:
@@ -85,8 +85,45 @@ def test_validate_deletion_protection_not_enabled_on_destroy() -> None:
     })
 
     validator = RDSPlanValidator(plan, input_object())
-    validator.validate()
+    errors = validator.validate()
     assert (
         "Deletion protection cannot be enabled on destroy. Disable deletion_protection first to remove the instance"
-        in validator.errors
+        in errors
     )
+
+
+def test_validate_no_changes_when_blue_green_deployment_enabled() -> None:
+    """Test no changes when Blue/Green Deployment is enabled"""
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_parameter_group",
+                "change": {
+                    "actions": [Action.ActionDelete],
+                    "before": {
+                        "id": "test-rds-pg15",
+                        "name": "test-rds-pg15",
+                        "engine": "postgres",
+                    },
+                    "after": None,
+                    "after_unknown": None,
+                },
+            }
+        ]
+    })
+    validator = RDSPlanValidator(
+        plan,
+        input_object({
+            "data": {
+                "blue_green_deployment": {
+                    "enabled": True,
+                    "switchover": True,
+                    "delete": True,
+                }
+            }
+        }),
+    )
+
+    errors = validator.validate()
+
+    assert errors == ["No changes allowed when Blue/Green Deployment enabled."]
