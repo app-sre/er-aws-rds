@@ -27,7 +27,13 @@ from hooks.utils.models import (
     WaitForSourceDBInstancesDeletedAction,
     WaitForSwitchoverCompletedAction,
 )
-from tests.conftest import input_object
+from tests.conftest import (
+    DEFAULT_RDS_INSTANCE,
+    DEFAULT_TARGET,
+    DEFAULT_TARGET_PARAMETER_GROUP,
+    DEFAULT_TARGET_RDS_INSTANCE,
+    input_object,
+)
 
 
 @pytest.fixture
@@ -43,50 +49,6 @@ def mock_logging() -> Iterator[Mock]:
         logger = create_autospec(Logger)
         m.return_value = logger
         yield logger
-
-
-DEFAULT_TARGET = {
-    "engine_version": "15.7",
-    "instance_class": "db.t4g.micro",
-    "iops": 3000,
-    "parameter_group": {
-        "name": "pg15",
-        "family": "postgres15",
-    },
-    "allocated_storage": 20,
-    "storage_type": "gp3",
-    "storage_throughput": 125,
-}
-
-DEFAULT_RDS_INSTANCE: DBInstanceTypeDef = {
-    "DBInstanceArn": "some-arn",
-    "DBInstanceIdentifier": "test-rds",
-    "DBParameterGroups": [
-        {
-            "DBParameterGroupName": "test-rds-pg15",
-            "ParameterApplyStatus": "in-sync",
-        }
-    ],
-    "Iops": 3000,
-    "EngineVersion": "15.7",
-    "DBInstanceClass": "db.t4g.micro",
-    "StorageType": "gp3",
-    "AllocatedStorage": 20,
-    "StorageThroughput": 125,
-    "DBInstanceStatus": "available",
-}
-
-DEFAULT_TARGET_RDS_INSTANCE: DBInstanceTypeDef = {
-    "DBInstanceArn": "some-arn-new",
-    "DBInstanceStatus": "available",
-    "DBInstanceIdentifier": "test-rds-new",
-}
-
-
-DEFAULT_TARGET_PARAMETER_GROUP: DBParameterGroupTypeDef = {
-    "DBParameterGroupName": "test-rds-pg15",
-    "DBParameterGroupFamily": "postgres15",
-}
 
 
 def build_blue_green_deployment_response(
