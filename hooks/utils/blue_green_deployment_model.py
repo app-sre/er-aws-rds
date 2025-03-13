@@ -6,6 +6,7 @@ from mypy_boto3_rds.type_defs import (
     BlueGreenDeploymentTypeDef,
     DBInstanceTypeDef,
     DBParameterGroupTypeDef,
+    ParameterOutputTypeDef,
     UpgradeTargetTypeDef,
 )
 from pydantic import BaseModel, model_validator
@@ -29,6 +30,8 @@ from hooks.utils.models import (
 )
 from hooks.utils.semantic import parse_semver
 
+POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME = "rds.logical_replication"
+
 
 class BlueGreenDeploymentModel(BaseModel):
     state: State
@@ -39,6 +42,7 @@ class BlueGreenDeploymentModel(BaseModel):
     blue_green_deployment: BlueGreenDeploymentTypeDef | None = None
     source_db_instances: list[DBInstanceTypeDef] = []
     target_db_instances: list[DBInstanceTypeDef] = []
+    source_db_parameters: dict[str, ParameterOutputTypeDef] = {}
     tags: dict[str, str] | None = None
     valid_upgrade_targets: dict[str, UpgradeTargetTypeDef] = {}
 
@@ -151,6 +155,35 @@ class BlueGreenDeploymentModel(BaseModel):
             raise ValueError(
                 f"Source Parameter Group status is not in-sync: {invalid_parameter_groups}"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_source_db_parameters(self) -> Self:
+        """
+        Validate source DB parameters.
+
+        For postgres, rds.logical_replication must be 1 for major version upgrade.
+
+        Reference:
+        * https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/blue-green-deployments-creating.html
+        """
+        assert self.db_instance
+        engine = self.db_instance["Engine"]
+        if engine != "postgres":
+            return self
+        target_engine_version = self._get_target_engine_version()
+        upgrade_target = self.valid_upgrade_targets[target_engine_version]
+        if upgrade_target["IsMajorVersionUpgrade"]:
+            logical_replication = self.source_db_parameters.get(
+                POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME
+            )
+            if (
+                logical_replication is None
+                or logical_replication["ParameterValue"] != "1"
+            ):
+                raise ValueError(
+                    "Source Parameter Group rds.logical_replication must turn on for major version upgrade"
+                )
         return self
 
     def plan_actions(self) -> list[BaseAction]:

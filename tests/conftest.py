@@ -3,6 +3,7 @@ from typing import Any
 from mypy_boto3_rds.type_defs import (
     DBInstanceTypeDef,
     DBParameterGroupTypeDef,
+    ParameterOutputTypeDef,
     UpgradeTargetTypeDef,
 )
 
@@ -152,6 +153,14 @@ DEFAULT_TARGET_RDS_INSTANCE: DBInstanceTypeDef = DEFAULT_RDS_INSTANCE | {
 DEFAULT_TARGET_PARAMETER_GROUP: DBParameterGroupTypeDef = {
     "DBParameterGroupName": "test-rds-pg15",
     "DBParameterGroupFamily": "postgres15",
+}
+
+DEFAULT_SOURCE_DB_PARAMETERS: dict[str, ParameterOutputTypeDef] = {
+    "rds.logical_replication": {
+        "ParameterName": "rds.logical_replication",
+        "ParameterValue": "1",
+        "ApplyMethod": "pending-reboot",
+    }
 }
 
 

@@ -1,4 +1,5 @@
 import pytest
+from mypy_boto3_rds.type_defs import ParameterOutputTypeDef
 from pydantic import ValidationError
 
 from er_aws_rds.input import (
@@ -8,7 +9,11 @@ from er_aws_rds.input import (
 )
 from hooks.utils.blue_green_deployment_model import BlueGreenDeploymentModel
 from hooks.utils.models import State
-from tests.conftest import DEFAULT_RDS_INSTANCE, DEFAULT_VALID_UPGRADE_TARGETS
+from tests.conftest import (
+    DEFAULT_RDS_INSTANCE,
+    DEFAULT_SOURCE_DB_PARAMETERS,
+    DEFAULT_VALID_UPGRADE_TARGETS,
+)
 
 
 def build_blue_green_deployment(
@@ -237,6 +242,7 @@ def test_validate_supported_engine_version_for_postgres_major_version_upgrade_ok
         valid_upgrade_targets={
             "18.0": {"EngineVersion": "18.0", "IsMajorVersionUpgrade": True},
         },
+        source_db_parameters=DEFAULT_SOURCE_DB_PARAMETERS,
     )
     assert model is not None
 
@@ -303,3 +309,51 @@ def test_validate_source_parameter_group_status(status: str) -> None:
             db_instance=db_instance,
             valid_upgrade_targets=DEFAULT_VALID_UPGRADE_TARGETS,
         )
+
+
+@pytest.mark.parametrize(
+    "source_db_parameters",
+    [
+        {},
+        {
+            "rds.logical_replication": {
+                "ParameterName": "rds.logical_replication",
+                "ParameterValue": "0",
+                "ApplyMethod": "pending-reboot",
+            }
+        },
+    ],
+)
+def test_validate_source_db_parameters(
+    source_db_parameters: dict[str, ParameterOutputTypeDef],
+) -> None:
+    """Test validate source db parameters"""
+    with pytest.raises(
+        ValidationError,
+        match=r".*Source Parameter Group rds.logical_replication must turn on for major version upgrade.*",
+    ):
+        BlueGreenDeploymentModel(
+            db_instance_identifier="test-rds",
+            state=State.INIT,
+            config=build_blue_green_deployment(
+                target=BlueGreenDeploymentTarget(engine_version="16.3")
+            ),
+            db_instance=DEFAULT_RDS_INSTANCE,
+            valid_upgrade_targets=DEFAULT_VALID_UPGRADE_TARGETS,
+            source_db_parameters=source_db_parameters,
+        )
+
+
+def test_validate_source_db_parameters_for_non_major_version_upgrade() -> None:
+    """Test validate source db parameters for minor version upgrade"""
+    model = BlueGreenDeploymentModel(
+        db_instance_identifier="test-rds",
+        state=State.INIT,
+        config=build_blue_green_deployment(
+            target=BlueGreenDeploymentTarget(engine_version="15.7")
+        ),
+        db_instance=DEFAULT_RDS_INSTANCE,
+        valid_upgrade_targets=DEFAULT_VALID_UPGRADE_TARGETS,
+        source_db_parameters={},
+    )
+    assert model is not None

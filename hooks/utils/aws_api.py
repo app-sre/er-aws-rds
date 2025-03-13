@@ -12,6 +12,7 @@ from mypy_boto3_rds.type_defs import (
     BlueGreenDeploymentTypeDef,
     DBInstanceTypeDef,
     DBParameterGroupTypeDef,
+    ParameterOutputTypeDef,
     UpgradeTargetTypeDef,
 )
 
@@ -92,6 +93,23 @@ class AWSApi:
         """Get DB parameter group info"""
         data = self.rds_client.describe_db_parameter_groups(DBParameterGroupName=name)
         return data["DBParameterGroups"][0] if data["DBParameterGroups"] else None
+
+    def get_db_parameters(
+        self,
+        parameter_group_name: str,
+        parameter_names: list[str],
+    ) -> dict[str, ParameterOutputTypeDef]:
+        """Get DB parameters"""
+        data = self.rds_client.describe_db_parameters(
+            DBParameterGroupName=parameter_group_name,
+            Filters=[
+                {
+                    "Name": "parameter-name",
+                    "Values": parameter_names,
+                }
+            ],
+        )
+        return {item["ParameterName"]: item for item in data["Parameters"] or []}
 
     def get_db_instance(self, identifier: str) -> DBInstanceTypeDef | None:
         """Get DB instance info"""
