@@ -330,6 +330,36 @@ def test_get_db_parameter_group_when_not_found(mock_rds_client: Mock) -> None:
     )
 
 
+def test_get_db_parameters(mock_rds_client: Mock) -> None:
+    """Test get_db_parameters"""
+    aws_api = AWSApi()
+    expected_parameter = {
+        "ParameterName": "rds.logical_replication",
+        "ParameterValue": "1",
+        "ApplyMethod": "pending-reboot",
+    }
+    mock_rds_client.describe_db_parameters.return_value = {
+        "Parameters": [expected_parameter]
+    }
+    expected_result = {"rds.logical_replication": expected_parameter}
+
+    result = aws_api.get_db_parameters(
+        parameter_group_name="pg15",
+        parameter_names=["rds.logical_replication"],
+    )
+
+    assert result == expected_result
+    mock_rds_client.describe_db_parameters.assert_called_once_with(
+        DBParameterGroupName="pg15",
+        Filters=[
+            {
+                "Name": "parameter-name",
+                "Values": ["rds.logical_replication"],
+            }
+        ],
+    )
+
+
 def test_switchover_blue_green_deployment(mock_rds_client: Mock) -> None:
     """Test switchover_blue_green_deployment"""
     aws_api = AWSApi()

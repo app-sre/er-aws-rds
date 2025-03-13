@@ -3,14 +3,21 @@ from collections.abc import Callable
 from functools import cached_property
 from typing import Any, Literal
 
-from mypy_boto3_rds.type_defs import BlueGreenDeploymentTypeDef, DBInstanceTypeDef
+from mypy_boto3_rds.type_defs import (
+    BlueGreenDeploymentTypeDef,
+    DBInstanceTypeDef,
+    ParameterOutputTypeDef,
+)
 
 from er_aws_rds.input import (
     AppInterfaceInput,
     BlueGreenDeployment,
 )
 from hooks.utils.aws_api import AWSApi
-from hooks.utils.blue_green_deployment_model import BlueGreenDeploymentModel
+from hooks.utils.blue_green_deployment_model import (
+    POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME,
+    BlueGreenDeploymentModel,
+)
 from hooks.utils.models import (
     ActionType,
     CreateAction,
@@ -87,6 +94,7 @@ class BlueGreenDeploymentManager:
         )
         source_db_instances = self._fetch_source_db_instances(blue_green_deployment)
         target_db_instances = self._fetch_target_db_instances(blue_green_deployment)
+        source_db_parameters = self._fetch_source_db_parameters(db_instance)
         return BlueGreenDeploymentModel(
             db_instance_identifier=db_instance_identifier,
             state=State.INIT,
@@ -97,7 +105,29 @@ class BlueGreenDeploymentManager:
             blue_green_deployment=blue_green_deployment,
             source_db_instances=source_db_instances,
             target_db_instances=target_db_instances,
+            source_db_parameters=source_db_parameters,
             tags=self.app_interface_input.data.tags,
+        )
+
+    def _fetch_source_db_parameters(
+        self,
+        db_instance: DBInstanceTypeDef | None,
+    ) -> dict[str, ParameterOutputTypeDef]:
+        if db_instance is None or db_instance["Engine"] != "postgres":
+            return {}
+        in_sync_parameter_group = next(
+            (
+                pg
+                for pg in db_instance["DBParameterGroups"] or []
+                if pg.get("ParameterApplyStatus") == "in-sync"
+            ),
+            None,
+        )
+        if in_sync_parameter_group is None:
+            return {}
+        return self.aws_api.get_db_parameters(
+            parameter_group_name=in_sync_parameter_group["DBParameterGroupName"],
+            parameter_names=[POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME],
         )
 
     def _fetch_blue_green_deployment_member_instances(
