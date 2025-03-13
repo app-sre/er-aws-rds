@@ -92,6 +92,48 @@ def test_validate_deletion_protection_not_enabled_on_destroy() -> None:
     )
 
 
+def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
+    """Test version upgrade validation"""
+    mock_aws_api.return_value.get_rds_valid_upgrade_targets.return_value = {
+        "16.1": {
+            "EngineVersion": "16.1",
+            "IsMajorVersionUpgrade": True,
+        }
+    }
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_instance",
+                "change": {
+                    "actions": [Action.ActionUpdate],
+                    "before": {
+                        "engine": "postgres",
+                        "engine_version": "15.7",
+                    },
+                    "after": {
+                        "engine": "postgres",
+                        "engine_version": "16.1",
+                    },
+                    "after_unknown": None,
+                },
+            }
+        ]
+    })
+
+    validator = RDSPlanValidator(
+        plan,
+        input_object({
+            "data": {
+                "allow_major_version_upgrade": False,
+            }
+        }),
+    )
+    errors = validator.validate()
+    assert errors == [
+        "To enable major version upgrade, allow_major_version_upgrade attribute must be set to True"
+    ]
+
+
 @pytest.mark.parametrize(
     "change",
     [

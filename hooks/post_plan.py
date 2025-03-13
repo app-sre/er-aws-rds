@@ -2,7 +2,6 @@
 import logging
 import sys
 
-import semver
 from external_resources_io.input import parse_model, read_input_from_file
 from external_resources_io.terraform import (
     Action,
@@ -110,18 +109,12 @@ class RDSPlanValidator:
                     )
 
                 # Major version upgrade validation
-                semver_current_version = semver.Version.parse(
-                    u.change.before["engine_version"], optional_minor_and_patch=True
-                )
-                semver_desired_version = semver.Version.parse(
-                    u.change.after["engine_version"], optional_minor_and_patch=True
-                )
                 if (
-                    semver_current_version.major != semver_desired_version.major
+                    valid_upgrade_targets[desired_version]["IsMajorVersionUpgrade"]
                     and not self.input.data.allow_major_version_upgrade
                 ):
                     self.errors.append(
-                        "To enable major version ugprades, allow_major_version_upgrade attribute must be set to True"
+                        "To enable major version upgrade, allow_major_version_upgrade attribute must be set to True"
                     )
 
     def _validate_deletion_protection_not_enabled_on_destroy(self) -> None:
