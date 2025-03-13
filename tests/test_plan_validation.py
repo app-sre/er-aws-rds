@@ -92,8 +92,88 @@ def test_validate_deletion_protection_not_enabled_on_destroy() -> None:
     )
 
 
-def test_validate_no_changes_when_blue_green_deployment_enabled() -> None:
+@pytest.mark.parametrize(
+    "change",
+    [
+        {
+            "type": "aws_db_parameter_group",
+            "change": {
+                "actions": ["create"],
+                "before": {},
+                "after": {
+                    "id": "test-rds-pg15",
+                    "name": "test-rds-pg15",
+                    "engine": "postgres",
+                },
+                "after_unknown": None,
+            },
+        },
+        {
+            "type": "aws_db_instance",
+            "change": {
+                "actions": ["update"],
+                "before": {
+                    "id": "some-id",
+                    "name": "test-rds",
+                    "engine": "postgres",
+                    "engine_version": "15.7",
+                    "allocated_storage": 30,
+                },
+                "after": {
+                    "id": "test-rds-pg15",
+                    "name": "test-rds-pg15",
+                    "engine": "postgres",
+                    "engine_version": "15.7",
+                    "allocated_storage": 20,
+                },
+                "after_unknown": {},
+            },
+        },
+        {
+            "type": "aws_db_instance",
+            "change": {
+                "actions": ["delete"],
+                "before": {
+                    "id": "some-id",
+                    "name": "test-rds",
+                    "engine": "postgres",
+                    "engine_version": "16.3",
+                },
+                "after": {},
+                "after_unknown": {},
+            },
+        },
+    ],
+)
+def test_validate_no_changes_when_blue_green_deployment_enabled(change: dict) -> None:
     """Test no changes when Blue/Green Deployment is enabled"""
+    plan = Plan.model_validate({
+        "resource_changes": [
+            change,
+        ]
+    })
+    validator = RDSPlanValidator(
+        plan,
+        input_object({
+            "data": {
+                "blue_green_deployment": {
+                    "enabled": True,
+                    "switchover": True,
+                    "delete": True,
+                }
+            }
+        }),
+    )
+
+    errors = validator.validate()
+
+    assert errors == ["No changes allowed when Blue/Green Deployment enabled"]
+
+
+def test_validate_no_changes_allow_parameter_group_delete_when_blue_green_deployment_enabled() -> (
+    None
+):
+    """Test no changes when Blue/Green Deployment is enabled but allow parameter group delete after switchover"""
     plan = Plan.model_validate({
         "resource_changes": [
             {
@@ -126,4 +206,4 @@ def test_validate_no_changes_when_blue_green_deployment_enabled() -> None:
 
     errors = validator.validate()
 
-    assert errors == ["No changes allowed when Blue/Green Deployment enabled."]
+    assert errors == []
