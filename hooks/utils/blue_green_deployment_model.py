@@ -139,6 +139,20 @@ class BlueGreenDeploymentModel(BaseModel):
                 raise ValueError(f"Unsupported engine: {engine}")
         return self
 
+    @model_validator(mode="after")
+    def _validate_source_parameter_group_status(self) -> Self:
+        assert self.db_instance
+        invalid_parameter_groups = [
+            pg
+            for pg in self.db_instance["DBParameterGroups"]
+            if pg["ParameterApplyStatus"] != "in-sync"
+        ]
+        if invalid_parameter_groups:
+            raise ValueError(
+                f"Source Parameter Group status is not in-sync: {invalid_parameter_groups}"
+            )
+        return self
+
     def plan_actions(self) -> list[BaseAction]:
         """Plan Actions"""
         state = self.state

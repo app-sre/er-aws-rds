@@ -8,7 +8,7 @@ from er_aws_rds.input import (
 )
 from hooks.utils.blue_green_deployment_model import BlueGreenDeploymentModel
 from hooks.utils.models import State
-from tests.conftest import DEFAULT_RDS_INSTANCE
+from tests.conftest import DEFAULT_RDS_INSTANCE, DEFAULT_VALID_UPGRADE_TARGETS
 
 
 def build_blue_green_deployment(
@@ -271,3 +271,35 @@ def test_validate_supported_engine_version_for_postgres_non_major_version_upgrad
         },
     )
     assert model is not None
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        "applying",
+        "failed-to-apply",
+        "pending-database-upgrade",
+        "pending-reboot",
+    ],
+)
+def test_validate_source_parameter_group_status(status: str) -> None:
+    """Test validate source parameter group status"""
+    db_instance = DEFAULT_RDS_INSTANCE | {
+        "DBParameterGroups": [
+            {
+                "DBParameterGroupName": "test-rds-pg15",
+                "ParameterApplyStatus": status,
+            }
+        ]
+    }
+    with pytest.raises(
+        ValidationError,
+        match=r".*Source Parameter Group status is not in-sync: .*",
+    ):
+        BlueGreenDeploymentModel(
+            db_instance_identifier="test-rds",
+            state=State.INIT,
+            config=build_blue_green_deployment(),
+            db_instance=db_instance,
+            valid_upgrade_targets=DEFAULT_VALID_UPGRADE_TARGETS,
+        )
