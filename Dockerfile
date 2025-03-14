@@ -44,7 +44,7 @@ COPY tests ./tests
 RUN make test
 
 FROM base AS prod
-# get cdktf providers
+# get terraform providers
 COPY --from=builder ${TF_PLUGIN_CACHE_DIR} ${TF_PLUGIN_CACHE_DIR}
 # get our app with the dependencies
 COPY --from=builder ${APP} ${APP}
