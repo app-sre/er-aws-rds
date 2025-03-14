@@ -301,16 +301,14 @@ class Rds(RdsAppInterface):
             and (pg := self.blue_green_deployment.target.parameter_group)
         ):
             pg.name = f"{self.identifier}-{pg.name or 'pg'}"
-            if not self.blue_green_deployment.enabled:
-                parameter_group_names = {
-                    group.name
-                    for group in [self.parameter_group, self.old_parameter_group]
-                    if group
-                }
-                if pg.name in parameter_group_names:
-                    raise ValueError(
-                        "Blue/Green Deployment Parameter Group name already exist"
-                    )
+            if (
+                self.parameter_group
+                and pg.name == self.parameter_group.name
+                and pg != self.parameter_group
+            ):
+                raise ValueError(
+                    "Blue/Green Deployment Parameter Group name already exist"
+                )
         return self
 
     @property
@@ -387,10 +385,11 @@ class TerraformModuleData(BaseModel):
         ]
         if (
             self.ai_input.data.blue_green_deployment
-            and not self.ai_input.data.blue_green_deployment.enabled
             and self.ai_input.data.blue_green_deployment.target
+            and (pg := self.ai_input.data.blue_green_deployment.target.parameter_group)
+            and (pg != self.ai_input.data.parameter_group)
         ):
-            pgs.append(self.ai_input.data.blue_green_deployment.target.parameter_group)
+            pgs.append(pg)
         return list(filter(None, pgs))
 
     @computed_field

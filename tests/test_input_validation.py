@@ -10,7 +10,7 @@ from er_aws_rds.input import (
     ParameterGroup,
 )
 
-from .conftest import input_data
+from .conftest import DEFAULT_PARAMETER_GROUP, input_data
 
 
 def test_validate_parameter_rds_replication() -> None:
@@ -149,23 +149,21 @@ def test_blue_green_deployment_parameter_group_name() -> None:
     )
 
 
-def test_blue_green_deployment_parameter_group_conflict_when_not_enabled() -> None:
-    """Test Blue/Green Deployment parameter group name unique"""
+@pytest.mark.parametrize("enabled", [True, False])
+def test_blue_green_deployment_parameter_group_same_name_different_values(
+    *,
+    enabled: bool,
+) -> None:
+    """Test Blue/Green Deployment parameter group name"""
+    target_parameter_group = DEFAULT_PARAMETER_GROUP | {"family": "postgres15"}
     mod_input = input_data({
         "data": {
-            "parameter_group": {
-                "name": "pg",
-            },
+            "parameter_group": DEFAULT_PARAMETER_GROUP,
             "blue_green_deployment": {
-                "enabled": False,
+                "enabled": enabled,
                 "switchover": False,
                 "delete": False,
-                "target": {
-                    "parameter_group": {
-                        "name": "pg",
-                        "family": "postgres16",
-                    }
-                },
+                "target": {"parameter_group": target_parameter_group},
             },
         }
     })
@@ -174,36 +172,6 @@ def test_blue_green_deployment_parameter_group_conflict_when_not_enabled() -> No
         match="Blue/Green Deployment Parameter Group name already exist",
     ):
         AppInterfaceInput.model_validate(mod_input)
-
-
-def test_blue_green_deployment_parameter_group_ignore_conflict_when_enabled() -> None:
-    """Test Blue/Green Deployment parameter group name ignore unique check"""
-    mod_input = input_data({
-        "data": {
-            "parameter_group": {
-                "name": "pg",
-            },
-            "blue_green_deployment": {
-                "enabled": True,
-                "switchover": False,
-                "delete": False,
-                "target": {
-                    "parameter_group": {
-                        "name": "pg",
-                        "family": "postgres16",
-                    }
-                },
-            },
-        }
-    })
-    model = AppInterfaceInput.model_validate(mod_input)
-    assert model.data.blue_green_deployment is not None
-    assert model.data.blue_green_deployment.target == BlueGreenDeploymentTarget(
-        parameter_group=ParameterGroup(
-            name=f"{model.data.identifier}-pg",
-            family="postgres16",
-        )
-    )
 
 
 def test_name() -> None:
