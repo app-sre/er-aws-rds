@@ -209,7 +209,9 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(change: dict) ->
 
     errors = validator.validate()
 
-    assert errors == ["No changes allowed when Blue/Green Deployment enabled"]
+    assert errors == [
+        f"No changes allowed when Blue/Green Deployment enabled, detected changes: {plan.resource_changes}"
+    ]
 
 
 def test_validate_no_changes_allow_parameter_group_delete_when_blue_green_deployment_enabled() -> (

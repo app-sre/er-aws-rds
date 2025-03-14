@@ -144,14 +144,26 @@ class RDSPlanValidator:
             or not self.input.data.blue_green_deployment.enabled
         ):
             return
-        if self.resource_creations or self.resource_updates:
-            self.errors.append("No changes allowed when Blue/Green Deployment enabled")
-        resource_deletions = self.resource_deletions
-        if (
-            len(resource_deletions) == 1
-            and resource_deletions[0].type != "aws_db_parameter_group"
-        ) or (len(resource_deletions) > 1):
-            self.errors.append("No changes allowed when Blue/Green Deployment enabled")
+        changed_actions = {
+            Action.ActionCreate,
+            Action.ActionUpdate,
+            Action.ActionDelete,
+        }
+        resource_changes = [
+            c
+            for c in self.plan.resource_changes
+            if c.change and changed_actions.intersection(c.change.actions)
+        ]
+        if not resource_changes:
+            return
+        if len(resource_changes) > 1 or not (
+            resource_changes[0].type == "aws_db_parameter_group"
+            and resource_changes[0].change
+            and resource_changes[0].change.actions == [Action.ActionDelete]
+        ):
+            self.errors.append(
+                f"No changes allowed when Blue/Green Deployment enabled, detected changes: {resource_changes}"
+            )
 
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
