@@ -1,3 +1,5 @@
+import pytest
+
 from er_aws_rds.input import TerraformModuleData
 
 from .conftest import DEFAULT_PARAMETER_GROUP, input_object
@@ -43,13 +45,14 @@ def test_parameter_group_names() -> None:
     ]
 
 
-def test_parameter_groups_when_blue_green_deployment_not_enabled() -> None:
-    """Test parameter groups when blue-green deployment is not enabled"""
+@pytest.mark.parametrize("enabled", [True, False])
+def test_parameter_groups_with_blue_green_deployment(*, enabled: bool) -> None:
+    """Test parameter groups with blue-green deployment"""
     model = input_object({
         "data": {
             "old_parameter_group": OLD_PARAMETER_GROUP,
             "blue_green_deployment": {
-                "enabled": False,
+                "enabled": enabled,
                 "switchover": False,
                 "delete": False,
                 "target": {
@@ -67,17 +70,18 @@ def test_parameter_groups_when_blue_green_deployment_not_enabled() -> None:
     ]
 
 
-def test_parameter_groups_when_blue_green_deployment_enabled() -> None:
-    """Test parameter groups when blue-green deployment is enabled"""
+def test_parameter_groups_when_blue_green_deployment_has_duplicate() -> None:
+    """Test parameter groups when blue-green deployment has duplicate"""
     model = input_object({
         "data": {
             "old_parameter_group": OLD_PARAMETER_GROUP,
+            "parameter_group": DEFAULT_PARAMETER_GROUP,
             "blue_green_deployment": {
-                "enabled": True,
+                "enabled": False,
                 "switchover": False,
                 "delete": False,
                 "target": {
-                    "parameter_group": BLUE_GREEN_DEPLOYMENT_PARAMETER_GROUP,
+                    "parameter_group": DEFAULT_PARAMETER_GROUP,
                 },
             },
         }
