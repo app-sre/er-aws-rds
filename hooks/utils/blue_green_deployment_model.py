@@ -121,16 +121,15 @@ class BlueGreenDeploymentModel(BaseModel):
 
     @model_validator(mode="after")
     def _validate_supported_engine_version(self) -> Self:
-        target_engine_version = self._get_target_engine_version()
-        upgrade_target = self.valid_upgrade_targets[target_engine_version]
         assert self.db_instance
         engine = self.db_instance["Engine"]
         engine_version = self.db_instance["EngineVersion"]
         match engine:
             case "postgres":
-                if upgrade_target[
-                    "IsMajorVersionUpgrade"
-                ] and not self._is_postgres_version_supported(engine_version):
+                if (
+                    self._is_major_version_upgrade()
+                    and not self._is_postgres_version_supported(engine_version)
+                ):
                     raise ValueError(
                         f"postgres engine_version {engine_version} is not supported for blue/green deployment"
                     )
@@ -169,21 +168,15 @@ class BlueGreenDeploymentModel(BaseModel):
         """
         assert self.db_instance
         engine = self.db_instance["Engine"]
-        if engine != "postgres":
+        if engine != "postgres" or not self._is_major_version_upgrade():
             return self
-        target_engine_version = self._get_target_engine_version()
-        upgrade_target = self.valid_upgrade_targets[target_engine_version]
-        if upgrade_target["IsMajorVersionUpgrade"]:
-            logical_replication = self.source_db_parameters.get(
-                POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME
+        logical_replication = self.source_db_parameters.get(
+            POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME
+        )
+        if logical_replication is None or logical_replication["ParameterValue"] != "1":
+            raise ValueError(
+                "Source Parameter Group rds.logical_replication must be 1 for major version upgrade"
             )
-            if (
-                logical_replication is None
-                or logical_replication["ParameterValue"] != "1"
-            ):
-                raise ValueError(
-                    "Source Parameter Group rds.logical_replication must turn on for major version upgrade"
-                )
         return self
 
     def plan_actions(self) -> list[BaseAction]:
@@ -218,6 +211,16 @@ class BlueGreenDeploymentModel(BaseModel):
             return self.config.target.engine_version
         assert self.db_instance
         return self.db_instance["EngineVersion"]
+
+    def _is_major_version_upgrade(self) -> bool:
+        target_engine_version = self._get_target_engine_version()
+        return self.valid_upgrade_targets.get(
+            target_engine_version,
+            {},
+        ).get(
+            "IsMajorVersionUpgrade",
+            False,
+        )
 
     @staticmethod
     def _is_mysql_version_supported(version: str) -> bool:
