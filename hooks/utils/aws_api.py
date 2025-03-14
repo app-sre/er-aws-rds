@@ -119,7 +119,13 @@ class AWSApi:
             )
         except self.rds_client.exceptions.DBInstanceNotFoundFault:
             return None
-        return data["DBInstances"][0] if data["DBInstances"] else None
+        if not data["DBInstances"]:
+            return None
+        db_instance = data["DBInstances"][0]
+        # ReplicaMode can contain unknown ReplicaModeType values like read-write
+        # exclude it to avoid Pydantic validation error
+        db_instance.pop("ReplicaMode", None)
+        return db_instance
 
     def delete_db_instance(self, identifier: str) -> None:
         self.rds_client.delete_db_instance(
