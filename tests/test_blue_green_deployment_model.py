@@ -330,7 +330,7 @@ def test_validate_source_db_parameters(
     """Test validate source db parameters"""
     with pytest.raises(
         ValidationError,
-        match=r".*Source Parameter Group rds.logical_replication must turn on for major version upgrade.*",
+        match=r".*Source Parameter Group rds.logical_replication must be 1 for major version upgrade.*",
     ):
         BlueGreenDeploymentModel(
             db_instance_identifier="test-rds",
