@@ -230,7 +230,12 @@ def test_run_create_blue_green_deployment_with_no_target(
         mock_aws_api.create_blue_green_deployment.assert_not_called()
         mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     else:
-        mock_logging.info.assert_called_with("Waiting for condition to be met...")
+        mock_logging.info.assert_has_calls([
+            call("Waiting for condition to be met..."),
+            call(
+                f"Target DB instances endpoints: {[DEFAULT_TARGET_RDS_INSTANCE['Endpoint']]}"
+            ),
+        ])
         assert mock_aws_api.get_db_instance.call_count == 2
         assert mock_aws_api.get_blue_green_deployment.call_count == 2
         mock_aws_api.create_blue_green_deployment.assert_called_once_with(
@@ -399,7 +404,12 @@ def test_run_when_create_blue_green_deployment_when_already_created(
     if dry_run:
         mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     else:
-        mock_logging.info.assert_called_with("Waiting for condition to be met...")
+        mock_logging.info.assert_has_calls([
+            call("Waiting for condition to be met..."),
+            call(
+                f"Target DB instances endpoints: {[DEFAULT_TARGET_RDS_INSTANCE['Endpoint']]}"
+            ),
+        ])
         assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
@@ -458,7 +468,12 @@ def test_run_when_blue_green_deployment_available_but_target_instance_not_availa
         mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
         assert mock_aws_api.get_db_instance.call_count == 3
     else:
-        mock_logging.info.assert_called_with("Waiting for condition to be met...")
+        mock_logging.info.assert_has_calls([
+            call("Waiting for condition to be met..."),
+            call(
+                f"Target DB instances endpoints: {[DEFAULT_TARGET_RDS_INSTANCE['Endpoint']]}"
+            ),
+        ])
         assert mock_aws_api.get_blue_green_deployment.call_count == 2
         assert mock_aws_api.get_db_instance.call_count == 4
 

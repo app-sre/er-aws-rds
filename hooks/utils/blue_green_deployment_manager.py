@@ -193,6 +193,13 @@ class BlueGreenDeploymentManager:
 
     def _handle_wait_for_available(self, _: WaitForAvailableAction) -> None:
         wait_for(self._wait_for_available_condition, logger=self.logger)
+        assert self.model
+        endpoints = [
+            endpoint
+            for instance in self.model.target_db_instances
+            if (endpoint := instance.get("Endpoint"))
+        ]
+        self.logger.info(f"Target DB instances endpoints: {endpoints}")
 
     def _handle_switchover(self, _: SwitchoverAction) -> None:
         assert self.model

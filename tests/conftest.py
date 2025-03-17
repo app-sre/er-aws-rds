@@ -130,6 +130,10 @@ DEFAULT_RDS_INSTANCE: DBInstanceTypeDef = {
     "DBInstanceStatus": "available",
     "DeletionProtection": False,
     "BackupRetentionPeriod": 7,
+    "Endpoint": {
+        "Address": "test-rds.xxx.us-east-1.rds.amazonaws.com",
+        "Port": 5432,
+    },
 }
 
 DEFAULT_VALID_UPGRADE_TARGETS: dict[str, UpgradeTargetTypeDef] = {
@@ -147,6 +151,10 @@ DEFAULT_TARGET_RDS_INSTANCE: DBInstanceTypeDef = DEFAULT_RDS_INSTANCE | {
     "DBInstanceArn": "some-arn-new",
     "DBInstanceStatus": "available",
     "DBInstanceIdentifier": "test-rds-new",
+    "Endpoint": {
+        "Address": "test-rds-green.xxx.us-east-1.rds.amazonaws.com",
+        "Port": 5432,
+    },
 }
 
 
