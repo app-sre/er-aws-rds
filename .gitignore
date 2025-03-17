@@ -166,7 +166,6 @@ cython_debug/
 # MacOS
 .DS_Store
 
-cdktf.out
 input.json
 credentials
 tmp/
@@ -176,6 +175,6 @@ tmp/
 module/.terraform/
 module/.terraform.*
 module/backend.tf
-module/tfvars.json
+module/terraform.tfvars.json
 module/plan
 module/plan.json

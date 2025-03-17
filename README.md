@@ -4,7 +4,7 @@ External Resources module to provision and manage RDS instances in AWS with App-
 
 ## Tech stack
 
-* Terraform CDKTF
+* Terraform
 * AWS provider
 * Random provider
 * Python 3.12
@@ -56,32 +56,25 @@ export $(cat .env | xargs)
 
 ### On Host
 
-Ensure `cdktf` is installed
-
-```shell
-npm install --global cdktf-cli@0.20.11
-```
-
 Generate terraform config.
 
 ```shell
-ER_INPUT_FILE="$PWD"/input.json cdktf synth
+generate-tf-config
 ```
 
 Ensure AWS credentials set in current shell, then use `terraform` to verify.
 
 ```shell
-cd cdktf.out/stakcs/CDKTF
+cd module
 terraform init
 terraform plan -out=plan
 terraform show -json plan > plan.json
 ```
 
-Test validation logic
+Test hooks
 
 ```shell
-cd ../../..
-ER_INPUT_FILE="$PWD"/input.json python hooks/validate_plan.py cdktf.out/stacks/CDKTF/plan.json
+hooks/post_plan.py
 ```
 
 ### In Container
@@ -100,27 +93,12 @@ docker run --rm -ti \
   -v $PWD/input.json:/inputs/input.json:Z \
   -v $PWD/credentials:/credentials:Z \
   -e AWS_SHARED_CREDENTIALS_FILE=/credentials \
+  -e WORK=/tmp/work \
   er-aws-rds:prod
 ```
 
-Generate terraform config.
+Run the whole process
 
 ```shell
-cdktf synth
-```
-
-Use `terraform` to verify.
-
-```shell
-cd cdktf.out/stakcs/CDKTF
-terraform init
-terraform plan -out=plan
-terraform show -json plan > plan.json
-```
-
-Test validation logic
-
-```shell
-cd ../../..
-python hooks/validate_plan.py cdktf.out/stacks/CDKTF/plan.json
+./entrypoint.sh
 ```

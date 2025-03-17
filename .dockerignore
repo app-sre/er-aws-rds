@@ -3,6 +3,6 @@ module/.terraform/
 module/.terraform*
 module/*.tftest.hcl
 module/backend.tf
-module/tfvars.json
+module/terraform.tfvars.json
 module/plan
 module/plan.json
