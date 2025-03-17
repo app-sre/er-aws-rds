@@ -2,6 +2,7 @@
 import logging
 import sys
 
+from external_resources_io.exit_status import EXIT_ERROR, EXIT_OK, EXIT_SKIP
 from external_resources_io.input import parse_model, read_input_from_file
 
 from er_aws_rds.input import AppInterfaceInput
@@ -10,8 +11,6 @@ from hooks.utils.blue_green_deployment_manager import BlueGreenDeploymentManager
 from hooks.utils.logger import setup_logging
 from hooks.utils.models import State
 from hooks.utils.runtime import is_dry_run
-
-SKIP_STATUS = 42
 
 
 def main() -> None:
@@ -29,7 +28,7 @@ def main() -> None:
         state = manager.run()
     except Exception:
         logger.exception("Error during Blue/Green Deployment management")
-        sys.exit(1)
+        sys.exit(EXIT_ERROR)
     match state:
         case (
             State.NOT_ENABLED
@@ -40,7 +39,7 @@ def main() -> None:
             | State.DELETING
         ):
             logger.info("Continue to the next step")
-            sys.exit(0)
+            sys.exit(EXIT_OK)
         case (
             State.INIT
             | State.PROVISIONING
@@ -48,7 +47,7 @@ def main() -> None:
             | State.SWITCHOVER_IN_PROGRESS
         ):
             logger.info("Blue/Green Deployment in progress, skip all other steps")
-            sys.exit(SKIP_STATUS)
+            sys.exit(EXIT_SKIP)
 
 
 if __name__ == "__main__":
