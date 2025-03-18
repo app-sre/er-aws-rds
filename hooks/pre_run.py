@@ -30,14 +30,7 @@ def main() -> None:
         logger.exception("Error during Blue/Green Deployment management")
         sys.exit(EXIT_ERROR)
     match state:
-        case (
-            State.NOT_ENABLED
-            | State.NO_OP
-            | State.SWITCHOVER_COMPLETED
-            | State.DELETING_SOURCE_DB_INSTANCES
-            | State.SOURCE_DB_INSTANCES_DELETED
-            | State.DELETING
-        ):
+        case State.NOT_ENABLED | State.NO_OP:
             logger.info("Continue to the next step")
             sys.exit(EXIT_OK)
         case (
@@ -45,6 +38,10 @@ def main() -> None:
             | State.PROVISIONING
             | State.AVAILABLE
             | State.SWITCHOVER_IN_PROGRESS
+            | State.SWITCHOVER_COMPLETED
+            | State.DELETING_SOURCE_DB_INSTANCES
+            | State.SOURCE_DB_INSTANCES_DELETED
+            | State.DELETING
         ):
             logger.info("Blue/Green Deployment in progress, skip all other steps")
             sys.exit(EXIT_SKIP)
