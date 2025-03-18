@@ -74,6 +74,27 @@ class ReplicaSource(BaseModel):
     identifier: str
 
 
+class BlueGreenDeploymentTarget(BaseModel):
+    "AppInterface BlueGreenDeployment.Target"
+
+    allocated_storage: int | None = None
+    engine_version: str | None = None
+    instance_class: str | None = None
+    iops: int | None = None
+    parameter_group: ParameterGroup | None = None
+    storage_throughput: int | None = None
+    storage_type: str | None = None
+
+
+class BlueGreenDeployment(BaseModel):
+    "AppInterface BlueGreenDeployment"
+
+    enabled: bool
+    switchover: bool
+    delete: bool
+    target: BlueGreenDeploymentTarget | None = None
+
+
 class DBInstanceTimeouts(BaseModel):
     "DBInstance timeouts"
 
@@ -101,6 +122,9 @@ class RdsAppInterface(BaseModel):
     region: str = Field(exclude=True)
     parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
     old_parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
+    blue_green_deployment: BlueGreenDeployment | None = Field(
+        default=None, exclude=True
+    )
     replica_source: ReplicaSource | None = Field(default=None, exclude=True)
     enhanced_monitoring: bool | None = Field(default=None, exclude=True)
     reset_password: str | None = Field(default="", exclude=True)
@@ -271,6 +295,20 @@ class Rds(RdsAppInterface):
                 msg = "Parameter group and old parameter group have the same name. Assign a name to the new parameter group"
                 raise ValueError(msg)
 
+        if (
+            self.blue_green_deployment
+            and self.blue_green_deployment.target
+            and (pg := self.blue_green_deployment.target.parameter_group)
+        ):
+            pg.name = f"{self.identifier}-{pg.name or 'pg'}"
+            if (
+                self.parameter_group
+                and pg.name == self.parameter_group.name
+                and pg != self.parameter_group
+            ):
+                raise ValueError(
+                    "Blue/Green Deployment Parameter Group name already exist"
+                )
         return self
 
     @property
@@ -341,14 +379,18 @@ class TerraformModuleData(BaseModel):
     @computed_field
     def parameter_groups(self) -> list[ParameterGroup] | None:
         """Parameter groups to create"""
-        return [
-            pg
-            for pg in [
-                self.ai_input.data.parameter_group,
-                self.ai_input.data.old_parameter_group,
-            ]
-            if pg
+        pgs = [
+            self.ai_input.data.parameter_group,
+            self.ai_input.data.old_parameter_group,
         ]
+        if (
+            self.ai_input.data.blue_green_deployment
+            and self.ai_input.data.blue_green_deployment.target
+            and (pg := self.ai_input.data.blue_green_deployment.target.parameter_group)
+            and (pg != self.ai_input.data.parameter_group)
+        ):
+            pgs.append(pg)
+        return list(filter(None, pgs))
 
     @computed_field
     def reset_password(self) -> str | None:

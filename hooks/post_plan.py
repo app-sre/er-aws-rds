@@ -2,7 +2,6 @@
 import logging
 import sys
 
-import semver
 from external_resources_io.input import parse_model, read_input_from_file
 from external_resources_io.terraform import (
     Action,
@@ -24,9 +23,7 @@ class RDSPlanValidator:
     def __init__(self, plan: Plan, app_interface_input: AppInterfaceInput) -> None:
         self.plan = plan
         self.input = app_interface_input
-        self.aws_api = AWSApi(
-            config_options={"region_name": app_interface_input.data.region}
-        )
+        self.aws_api = AWSApi(region_name=app_interface_input.data.region)
         self.errors: list[str] = []
 
     @property
@@ -71,17 +68,14 @@ class RDSPlanValidator:
 
     @property
     def aws_db_instance_creations(self) -> list[ResourceChange]:
-        "Gets the RDS isntance creations"
         return [c for c in self.resource_creations if c.type == "aws_db_instance"]
 
     @property
     def aws_db_instance_updates(self) -> list[ResourceChange]:
-        "Gets the RDS isntance updates"
         return [c for c in self.resource_updates if c.type == "aws_db_instance"]
 
     @property
     def aws_db_instance_deletions(self) -> list[ResourceChange]:
-        "Gets the RDS instance deletions"
         return [c for c in self.resource_deletions if c.type == "aws_db_instance"]
 
     def _validate_version_on_create(self) -> None:
@@ -103,30 +97,24 @@ class RDSPlanValidator:
             current_version = u.change.before["engine_version"]
             desired_version = u.change.after["engine_version"]
             if current_version != desired_version:
-                valid_update_versions = self.aws_api.get_rds_valid_update_versions(
+                valid_upgrade_targets = self.aws_api.get_rds_valid_upgrade_targets(
                     u.change.before["engine"], current_version
                 )
-                if desired_version not in valid_update_versions:
+                if desired_version not in valid_upgrade_targets:
                     self.errors.append(
                         "Engine version cannot be updated. "
                         f"Current_version: {current_version}, "
                         f"Desired_version: {desired_version}, "
-                        f"Valid update versions: {valid_update_versions}"
+                        f"Valid update versions: {valid_upgrade_targets.keys()}"
                     )
 
                 # Major version upgrade validation
-                semver_current_version = semver.Version.parse(
-                    u.change.before["engine_version"], optional_minor_and_patch=True
-                )
-                semver_desired_version = semver.Version.parse(
-                    u.change.after["engine_version"], optional_minor_and_patch=True
-                )
                 if (
-                    semver_current_version.major != semver_desired_version.major
+                    valid_upgrade_targets[desired_version]["IsMajorVersionUpgrade"]
                     and not self.input.data.allow_major_version_upgrade
                 ):
                     self.errors.append(
-                        "To enable major version ugprades, allow_major_version_upgrade attribute must be set to True"
+                        "To enable major version upgrade, allow_major_version_upgrade attribute must be set to True"
                     )
 
     def _validate_deletion_protection_not_enabled_on_destroy(self) -> None:
@@ -150,12 +138,41 @@ class RDSPlanValidator:
         ):
             self.errors.append("Deletions and Creations mismatch")
 
-    def validate(self) -> bool:
-        """Validate method"""
+    def _validate_no_changes_when_blue_green_deployment_enabled(self) -> None:
+        if (
+            self.input.data.blue_green_deployment is None
+            or not self.input.data.blue_green_deployment.enabled
+        ):
+            return
+        changed_actions = {
+            Action.ActionCreate,
+            Action.ActionUpdate,
+            Action.ActionDelete,
+        }
+        resource_changes = [
+            c
+            for c in self.plan.resource_changes
+            if c.change and changed_actions.intersection(c.change.actions)
+        ]
+        if not resource_changes:
+            return
+        if len(resource_changes) > 1 or not (
+            resource_changes[0].type == "aws_db_parameter_group"
+            and resource_changes[0].change
+            and resource_changes[0].change.actions == [Action.ActionDelete]
+        ):
+            self.errors.append(
+                f"No changes allowed when Blue/Green Deployment enabled, detected changes: {resource_changes}"
+            )
+
+    def validate(self) -> list[str]:
+        """Validate method, return validation errors"""
+        self.errors.clear()
         self._validate_version_on_create()
         self._validate_version_upgrade()
         self._validate_deletion_protection_not_enabled_on_destroy()
-        return not self.errors
+        self._validate_no_changes_when_blue_green_deployment_enabled()
+        return self.errors
 
 
 if __name__ == "__main__":
@@ -173,9 +190,9 @@ if __name__ == "__main__":
     logger.info("Running RDS terraform plan validation")
     parser = TerraformJsonPlanParser(plan_path=terraform_plan_json)
     validator = RDSPlanValidator(parser.plan, app_interface_input)
-    if not validator.validate():
-        logger.error(validator.errors)
+    if errors := validator.validate():
+        logger.error(errors)
         sys.exit(1)
     else:
-        logger.info("Validation ended succesfully")
+        logger.info("Validation ended successfully")
         sys.exit(0)
