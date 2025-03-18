@@ -5,7 +5,7 @@ from boto3 import Session
 if TYPE_CHECKING:
     from mypy_boto3_rds import RDSClient
     from mypy_boto3_rds.type_defs import (
-        DeleteBlueGreenDeploymentRequestRequestTypeDef,
+        DeleteBlueGreenDeploymentRequestTypeDef,
         FilterTypeDef,
     )
 from mypy_boto3_rds.type_defs import (
@@ -172,7 +172,7 @@ class AWSApi:
                               You can not specify this option if the blue/green deployment
                               status is SWITCHOVER_COMPLETED.
         """
-        kwargs: DeleteBlueGreenDeploymentRequestRequestTypeDef = {
+        kwargs: DeleteBlueGreenDeploymentRequestTypeDef = {
             "BlueGreenDeploymentIdentifier": identifier
         }
         if delete_target is not None:
