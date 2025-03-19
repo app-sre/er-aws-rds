@@ -309,3 +309,23 @@ def test_validate_replica_source_with_parameter_group() -> None:
         match=r".*parameter_group is not supported when replica_source has blue_green_deployment enabled.*",
     ):
         AppInterfaceInput.model_validate(mod_input)
+
+
+def test_validate_replica_source_with_deletion_protection() -> None:
+    """Test that replica_source with deletion_protection"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment_enabled": True,
+            },
+            "parameter_group": None,
+            "deletion_protection": True,
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*deletion_protection must be disabled when replica_source has blue_green_deployment enabled.*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)

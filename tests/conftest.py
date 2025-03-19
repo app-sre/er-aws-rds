@@ -63,6 +63,7 @@ DEFAULT_DATA = {
         "apply_immediately": True,
         "identifier": "test-rds",
         "parameter_group": DEFAULT_PARAMETER_GROUP,
+        "deletion_protection": False,
         "output_resource_name": "test-rds-credentials",
         "ca_cert": {
             "path": "app-interface/global/rds-ca-cert",

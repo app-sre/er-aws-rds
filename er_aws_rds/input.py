@@ -177,6 +177,7 @@ class Rds(RdsAppInterface):
     parameter_group_name: str | None = None
     timeouts: DBInstanceTimeouts | None = None
     blue_green_update: BlueGreenUpdate | None = None
+    deletion_protection: bool | None = None
 
     @property
     def enhanced_monitoring_role_name(self) -> str:
@@ -234,10 +235,15 @@ class Rds(RdsAppInterface):
         if not self.replica_source:
             return self
 
-        if self.replica_source.blue_green_deployment_enabled and self.parameter_group:
-            raise ValueError(
-                "parameter_group is not supported when replica_source has blue_green_deployment enabled"
-            )
+        if self.replica_source.blue_green_deployment_enabled:
+            if self.parameter_group:
+                raise ValueError(
+                    "parameter_group is not supported when replica_source has blue_green_deployment enabled"
+                )
+            if self.deletion_protection:
+                raise ValueError(
+                    "deletion_protection must be disabled when replica_source has blue_green_deployment enabled"
+                )
 
         if self.replicate_source_db:
             msg = "Only one of replicate_source_db or replica_source can be defined"
