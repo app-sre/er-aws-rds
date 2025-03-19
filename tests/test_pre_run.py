@@ -59,6 +59,8 @@ def mock_is_dry_run() -> Iterator[Mock]:
         (False, State.DELETING, 42),
         (True, State.NO_OP, 0),
         (False, State.NO_OP, 0),
+        (True, State.REPLICA_SOURCE_ENABLED, 42),
+        (False, State.REPLICA_SOURCE_ENABLED, 42),
     ],
 )
 def test_pre_hook(  # noqa: PLR0913

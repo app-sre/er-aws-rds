@@ -72,6 +72,7 @@ class ReplicaSource(BaseModel):
 
     region: str
     identifier: str
+    blue_green_deployment_enabled: bool
 
 
 class BlueGreenDeploymentTarget(BaseModel):

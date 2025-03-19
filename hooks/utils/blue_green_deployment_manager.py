@@ -52,6 +52,11 @@ class BlueGreenDeploymentManager:
 
     def run(self) -> State:
         """Run Blue/Green Deployment Manager"""
+        if (
+            replica_source := self.app_interface_input.data.replica_source
+        ) and replica_source.blue_green_deployment_enabled:
+            self.logger.info("blue_green_deployment in replica_source enabled.")
+            return State.REPLICA_SOURCE_ENABLED
         config = self.app_interface_input.data.blue_green_deployment
         if config is None or not config.enabled:
             self.logger.info("blue_green_deployment not enabled.")

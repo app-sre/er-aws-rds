@@ -35,6 +35,7 @@ def main() -> None:
             sys.exit(EXIT_OK)
         case (
             State.INIT
+            | State.REPLICA_SOURCE_ENABLED
             | State.PROVISIONING
             | State.AVAILABLE
             | State.SWITCHOVER_IN_PROGRESS

@@ -46,6 +46,7 @@ class State(StrEnum):
     """State Enum"""
 
     INIT = "init"
+    REPLICA_SOURCE_ENABLED = "replica_source_enabled"
     NOT_ENABLED = "not_enabled"
     PROVISIONING = "provisioning"
     AVAILABLE = "available"
