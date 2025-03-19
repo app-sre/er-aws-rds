@@ -347,14 +347,10 @@ class Rds(RdsAppInterface):
         return self
 
     @model_validator(mode="after")
-    def blue_green_update_requirements(self) -> "Rds":
-        if (
-            self.blue_green_update
-            and self.blue_green_update.enabled
-            and self.snapshot_identifier
-        ):
+    def _validate_blue_green_update(self) -> "Rds":
+        if self.blue_green_update and self.blue_green_update.enabled:
             raise ValueError(
-                "Blue/Green updates can not be enabled when snapshot_identifier is set"
+                "blue_green_update is not supported, use blue_green_deployment instead"
             )
         return self
 

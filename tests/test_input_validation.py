@@ -280,3 +280,13 @@ def test_timeouts() -> None:
     model = AppInterfaceInput.model_validate(mod_input)
     assert model.data.timeouts is not None
     assert model.data.timeouts.create == "60m"
+
+
+def test_validate_blue_green_update() -> None:
+    """Test blue_green_update"""
+    mod_input = input_data({"data": {"blue_green_update": {"enabled": True}}})
+    with pytest.raises(
+        ValidationError,
+        match=r"blue_green_update is not supported, use blue_green_deployment instead",
+    ):
+        AppInterfaceInput.model_validate(mod_input)

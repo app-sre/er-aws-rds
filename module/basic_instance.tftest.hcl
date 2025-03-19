@@ -21,7 +21,6 @@ variables {
     performance_insights_enabled = true
     deletion_protection          = true
     ca_cert_identifier           = "rds-ca-rsa2048-g1"
-    blue_green_update            = { enabled = true }
     db_name                      = "custom_database"
   }
 

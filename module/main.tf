@@ -86,20 +86,14 @@ resource "aws_db_event_subscription" "this" {
 }
 
 resource "aws_db_instance" "this" {
-  allocated_storage           = try(var.rds_instance.allocated_storage, null)
-  allow_major_version_upgrade = try(var.rds_instance.allow_major_version_upgrade, null)
-  apply_immediately           = try(var.rds_instance.apply_immediately, null)
-  auto_minor_version_upgrade  = try(var.rds_instance.auto_minor_version_upgrade, null)
-  availability_zone           = try(var.rds_instance.availability_zone, null)
-  backup_retention_period     = try(var.rds_instance.backup_retention_period, null)
-  backup_target               = try(var.rds_instance.backup_target, null)
-  backup_window               = try(var.rds_instance.backup_window, null)
-  dynamic "blue_green_update" {
-    for_each = try(length(var.rds_instance.blue_green_update), 0) > 0 ? [var.rds_instance.blue_green_update.enabled] : []
-    content {
-      enabled = try(var.rds_instance.blue_green_update.enabled, null)
-    }
-  }
+  allocated_storage                     = try(var.rds_instance.allocated_storage, null)
+  allow_major_version_upgrade           = try(var.rds_instance.allow_major_version_upgrade, null)
+  apply_immediately                     = try(var.rds_instance.apply_immediately, null)
+  auto_minor_version_upgrade            = try(var.rds_instance.auto_minor_version_upgrade, null)
+  availability_zone                     = try(var.rds_instance.availability_zone, null)
+  backup_retention_period               = try(var.rds_instance.backup_retention_period, null)
+  backup_target                         = try(var.rds_instance.backup_target, null)
+  backup_window                         = try(var.rds_instance.backup_window, null)
   ca_cert_identifier                    = try(var.rds_instance.ca_cert_identifier, null)
   character_set_name                    = try(var.rds_instance.character_set_name, null)
   copy_tags_to_snapshot                 = try(var.rds_instance.copy_tags_to_snapshot, null)
