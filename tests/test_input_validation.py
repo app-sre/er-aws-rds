@@ -290,3 +290,22 @@ def test_validate_blue_green_update() -> None:
         match=r"blue_green_update is not supported, use blue_green_deployment instead",
     ):
         AppInterfaceInput.model_validate(mod_input)
+
+
+def test_validate_replica_source_with_parameter_group() -> None:
+    """Test that replica_source with parameter_group is not allowed"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment_enabled": True,
+            },
+            "parameter_group": DEFAULT_PARAMETER_GROUP,
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*parameter_group is not supported when replica_source has blue_green_deployment enabled.*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)

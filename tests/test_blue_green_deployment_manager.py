@@ -1114,7 +1114,8 @@ def test_run_for_read_replica_has_blue_green_deployment_enabled(
                 "identifier": "test-rds-source",
                 "region": "us-east-1",
                 "blue_green_deployment_enabled": True,
-            }
+            },
+            "parameter_group": None,
         }
     }
     manager = BlueGreenDeploymentManager(
