@@ -292,8 +292,8 @@ def test_validate_blue_green_update() -> None:
         AppInterfaceInput.model_validate(mod_input)
 
 
-def test_validate_replica_source_with_parameter_group() -> None:
-    """Test that replica_source with parameter_group is not allowed"""
+def test_validate_blue_green_deployment_for_replica_with_parameter_group() -> None:
+    """Test blue_green_deployment for replica with parameter group"""
     mod_input = input_data({
         "data": {
             "replica_source": {
@@ -311,8 +311,8 @@ def test_validate_replica_source_with_parameter_group() -> None:
         AppInterfaceInput.model_validate(mod_input)
 
 
-def test_validate_replica_source_with_deletion_protection() -> None:
-    """Test that replica_source with deletion_protection"""
+def test_validate_blue_green_deployment_for_replica_with_deletion_protection() -> None:
+    """Test blue_green_deployment for replica with deletion protection"""
     mod_input = input_data({
         "data": {
             "replica_source": {
@@ -327,5 +327,28 @@ def test_validate_replica_source_with_deletion_protection() -> None:
     with pytest.raises(
         ValidationError,
         match=r".*deletion_protection must be disabled when replica_source has blue_green_deployment enabled.*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)
+
+
+def test_validate_blue_green_deployment_for_replica() -> None:
+    """Test that blue_green_deployment is not supported for replica instance"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment_enabled": False,
+            },
+            "blue_green_deployment": {
+                "enabled": False,
+                "switchover": False,
+                "delete": False,
+            },
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*blue_green_deployment is not supported for replica instance.*",
     ):
         AppInterfaceInput.model_validate(mod_input)
