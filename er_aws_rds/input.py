@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from external_resources_io.input import AppInterfaceProvision
 from pydantic import (
@@ -193,7 +193,7 @@ class Rds(RdsAppInterface):
         return self.name
 
     @model_validator(mode="after")
-    def az_belongs_to_region(self) -> "Rds":
+    def az_belongs_to_region(self) -> Self:
         """Check if a the AZ belongs to a region"""
         if self.availability_zone:
             az_region = self.availability_zone[:-1]
@@ -207,14 +207,14 @@ class Rds(RdsAppInterface):
         return self
 
     @model_validator(mode="after")
-    def unset_az_if_multi_region(self) -> "Rds":
+    def unset_az_if_multi_region(self) -> Self:
         """Remove az for multi_region instances"""
         if self.multi_az:
             self.availability_zone = None
         return self
 
     @model_validator(mode="after")
-    def unset_replica_or_snapshot_not_allowed_attrs(self) -> "Rds":
+    def unset_replica_or_snapshot_not_allowed_attrs(self) -> Self:
         """
         Some attributes are not allowed if the instance is a read replica or is created from a snapshot.
 
@@ -228,7 +228,7 @@ class Rds(RdsAppInterface):
         return self
 
     @model_validator(mode="after")
-    def replication(self) -> "Rds":
+    def replication(self) -> Self:
         """replica_source and replicate_source_db are mutually excluive"""
         if not self.replica_source:
             return self
@@ -257,7 +257,7 @@ class Rds(RdsAppInterface):
         return self
 
     @model_validator(mode="after")
-    def validate_parameter_group_parameters(self) -> "Rds":
+    def validate_parameter_group_parameters(self) -> Self:
         """Validate that every parameter complies with our requirements"""
         if not self.parameter_group:
             return self
@@ -271,7 +271,7 @@ class Rds(RdsAppInterface):
         return self
 
     @model_validator(mode="after")
-    def parameter_groups(self) -> "Rds":
+    def parameter_groups(self) -> Self:
         """
         Sets the right parameter group names. The instance identifier is used as prefix on each pg.
 
@@ -317,7 +317,7 @@ class Rds(RdsAppInterface):
         return self.replica_source is not None or self.replicate_source_db is not None
 
     @model_validator(mode="after")
-    def enhanced_monitoring_attributes(self) -> "Rds":
+    def enhanced_monitoring_attributes(self) -> Self:
         """
         Enhanced monitoring validation:
 
@@ -340,21 +340,17 @@ class Rds(RdsAppInterface):
         return self
 
     @model_validator(mode="after")
-    def kms_key_id_remove_alias_prefix(self) -> "Rds":
+    def kms_key_id_remove_alias_prefix(self) -> Self:
         """Remove alias prefix from kms_key_id"""
         if self.kms_key_id:
             self.kms_key_id = self.kms_key_id.removeprefix("alias/")
         return self
 
     @model_validator(mode="after")
-    def blue_green_update_requirements(self) -> "Rds":
-        if (
-            self.blue_green_update
-            and self.blue_green_update.enabled
-            and self.snapshot_identifier
-        ):
+    def _validate_blue_green_update(self) -> Self:
+        if self.blue_green_update and self.blue_green_update.enabled:
             raise ValueError(
-                "Blue/Green updates can not be enabled when snapshot_identifier is set"
+                "blue_green_update is not supported, use blue_green_deployment instead"
             )
         return self
 
