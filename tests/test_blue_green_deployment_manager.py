@@ -948,7 +948,7 @@ def test_run_when_no_changes_and_no_blue_green_deployment(
 
     state = manager.run()
 
-    assert state == State.INIT
+    assert state == State.NO_OP
     mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
     mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     mock_logging.info.assert_called_once_with("No changes for Blue/Green Deployment.")
