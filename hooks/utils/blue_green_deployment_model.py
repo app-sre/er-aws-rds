@@ -191,8 +191,7 @@ class BlueGreenDeploymentModel(BaseModel):
             next_state = action.next_state
             if next_state not in allowed_next_states:
                 raise ValueError(f"Invalid next state: {next_state} for state: {state}")
-            if action.type != ActionType.NO_OP:
-                actions.append(action)
+            actions.append(action)
             state = next_state
         return actions
 

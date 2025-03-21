@@ -72,6 +72,7 @@ class ReplicaSource(BaseModel):
 
     region: str
     identifier: str
+    blue_green_deployment_enabled: bool
 
 
 class BlueGreenDeploymentTarget(BaseModel):
@@ -176,6 +177,7 @@ class Rds(RdsAppInterface):
     parameter_group_name: str | None = None
     timeouts: DBInstanceTimeouts | None = None
     blue_green_update: BlueGreenUpdate | None = None
+    deletion_protection: bool | None = None
 
     @property
     def enhanced_monitoring_role_name(self) -> str:
@@ -351,6 +353,23 @@ class Rds(RdsAppInterface):
         if self.blue_green_update and self.blue_green_update.enabled:
             raise ValueError(
                 "blue_green_update is not supported, use blue_green_deployment instead"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_blue_green_deployment_for_replica(self) -> Self:
+        if self.replica_source and self.replica_source.blue_green_deployment_enabled:
+            if self.parameter_group:
+                raise ValueError(
+                    "parameter_group is not supported when replica_source has blue_green_deployment enabled"
+                )
+            if self.deletion_protection:
+                raise ValueError(
+                    "deletion_protection must be disabled when replica_source has blue_green_deployment enabled"
+                )
+        if self.is_read_replica and self.blue_green_deployment:
+            raise ValueError(
+                "blue_green_deployment is not supported for replica instance"
             )
         return self
 

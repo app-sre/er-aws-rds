@@ -23,6 +23,7 @@ from hooks.utils.models import (
     CreateAction,
     DeleteAction,
     DeleteSourceDBInstanceAction,
+    NoOpAction,
     State,
     SwitchoverAction,
     WaitForAvailableAction,
@@ -52,14 +53,25 @@ class BlueGreenDeploymentManager:
 
     def run(self) -> State:
         """Run Blue/Green Deployment Manager"""
+        if (
+            replica_source := self.app_interface_input.data.replica_source
+        ) and replica_source.blue_green_deployment_enabled:
+            self.logger.info("blue_green_deployment in replica_source enabled.")
+            return State.REPLICA_SOURCE_ENABLED
+
         config = self.app_interface_input.data.blue_green_deployment
         if config is None or not config.enabled:
             self.logger.info("blue_green_deployment not enabled.")
             return State.NOT_ENABLED
+
         self.model = self._build_model(config)
         actions = self.model.plan_actions()
-        if not actions:
+        if all(action.type == ActionType.NO_OP for action in actions):
             self.logger.info("No changes for Blue/Green Deployment.")
+            for action in actions:
+                self.model.state = action.next_state
+            return self.model.state
+
         for action in actions:
             self.logger.info(f"Action {action.type}: {action.model_dump_json()}")
             if not self.dry_run:
@@ -176,6 +188,7 @@ class BlueGreenDeploymentManager:
             ActionType.DELETE: self._handle_delete,
             ActionType.DELETE_WITHOUT_SWITCHOVER: self._handle_delete_without_switchover,
             ActionType.WAIT_FOR_DELETED: self._handle_wait_for_delete,
+            ActionType.NO_OP: self._handle_no_op,
         }
 
     def _handle_create(self, action: CreateAction) -> None:
@@ -268,3 +281,7 @@ class BlueGreenDeploymentManager:
 
     def _handle_wait_for_delete(self, _: WaitForDeletedAction) -> None:
         wait_for(self._wait_for_delete_condition_condition, logger=self.logger)
+
+    @staticmethod
+    def _handle_no_op(_: NoOpAction) -> None:
+        return

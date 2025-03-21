@@ -290,3 +290,65 @@ def test_validate_blue_green_update() -> None:
         match=r"blue_green_update is not supported, use blue_green_deployment instead",
     ):
         AppInterfaceInput.model_validate(mod_input)
+
+
+def test_validate_blue_green_deployment_for_replica_with_parameter_group() -> None:
+    """Test blue_green_deployment for replica with parameter group"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment_enabled": True,
+            },
+            "parameter_group": DEFAULT_PARAMETER_GROUP,
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*parameter_group is not supported when replica_source has blue_green_deployment enabled.*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)
+
+
+def test_validate_blue_green_deployment_for_replica_with_deletion_protection() -> None:
+    """Test blue_green_deployment for replica with deletion protection"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment_enabled": True,
+            },
+            "parameter_group": None,
+            "deletion_protection": True,
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*deletion_protection must be disabled when replica_source has blue_green_deployment enabled.*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)
+
+
+def test_validate_blue_green_deployment_for_replica() -> None:
+    """Test that blue_green_deployment is not supported for replica instance"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment_enabled": False,
+            },
+            "blue_green_deployment": {
+                "enabled": False,
+                "switchover": False,
+                "delete": False,
+            },
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*blue_green_deployment is not supported for replica instance.*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)

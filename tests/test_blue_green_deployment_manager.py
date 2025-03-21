@@ -948,7 +948,7 @@ def test_run_when_no_changes_and_no_blue_green_deployment(
 
     state = manager.run()
 
-    assert state == State.INIT
+    assert state == State.NO_OP
     mock_aws_api.get_db_instance.assert_called_once_with("test-rds")
     mock_aws_api.get_blue_green_deployment.assert_called_once_with("test-rds")
     mock_logging.info.assert_called_once_with("No changes for Blue/Green Deployment.")
@@ -1091,3 +1091,42 @@ def test_run_when_all_in_one_config(
         )
         mock_aws_api.delete_db_instance.assert_called_once_with("test-rds-old")
         mock_aws_api.delete_blue_green_deployment.assert_called_once_with("some-bg-id")
+
+
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.REPLICA_SOURCE_ENABLED),
+        (False, State.REPLICA_SOURCE_ENABLED),
+    ],
+)
+def test_run_for_read_replica_has_blue_green_deployment_enabled(
+    mock_aws_api: Mock,
+    mock_logging: Mock,
+    *,
+    dry_run: bool,
+    expected_state: State,
+) -> None:
+    """Test read replica"""
+    additional_data = {
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment_enabled": True,
+            },
+            "parameter_group": None,
+        }
+    }
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(additional_data),
+        dry_run=dry_run,
+    )
+
+    state = manager.run()
+
+    assert state == expected_state
+    mock_logging.info.assert_called_once_with(
+        "blue_green_deployment in replica_source enabled."
+    )
