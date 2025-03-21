@@ -392,6 +392,11 @@ class TerraformModuleData(BaseModel):
         return self.ai_input.data
 
     @computed_field
+    def output_resource_db_name(self) -> str | None:
+        """Output resource db_name"""
+        return self.ai_input.data.output_resource_db_name
+
+    @computed_field
     def parameter_groups(self) -> list[ParameterGroup] | None:
         """Parameter groups to create"""
         pgs = [
