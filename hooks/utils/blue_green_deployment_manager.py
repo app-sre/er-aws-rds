@@ -218,7 +218,10 @@ class BlueGreenDeploymentManager:
         assert self.model
         assert self.model.blue_green_deployment
         identifier = self.model.blue_green_deployment["BlueGreenDeploymentIdentifier"]
-        self.aws_api.switchover_blue_green_deployment(identifier)
+        self.aws_api.switchover_blue_green_deployment(
+            identifier,
+            timeout=self.model.config.switchover_timeout,
+        )
 
     def _wait_for_switchover_completed_condition(self) -> bool:
         assert self.model

@@ -90,9 +90,10 @@ class BlueGreenDeploymentTarget(BaseModel):
 class BlueGreenDeployment(BaseModel):
     "AppInterface BlueGreenDeployment"
 
-    enabled: bool
-    switchover: bool
-    delete: bool
+    enabled: bool | None = None
+    switchover: bool | None = None
+    delete: bool | None = None
+    switchover_timeout: int | None = None
     target: BlueGreenDeploymentTarget | None = None
 
 
