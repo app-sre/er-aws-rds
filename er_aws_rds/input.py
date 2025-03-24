@@ -123,7 +123,6 @@ class RdsAppInterface(BaseModel):
     aws_partition: str | None = Field(default="aws", exclude=True)
     region: str = Field(exclude=True)
     parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
-    old_parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
     blue_green_deployment: BlueGreenDeployment | None = Field(
         default=None, exclude=True
     )
@@ -285,19 +284,6 @@ class Rds(RdsAppInterface):
             self.parameter_group.name = name
             self.parameter_group_name = name
 
-        if self.old_parameter_group and not self.parameter_group:
-            msg = "old_parameter_group must be used with parameter_group. old_parameter_group is only used for RDS major version upgrades"
-            raise ValueError(msg)
-
-        if self.old_parameter_group and self.parameter_group:
-            self.old_parameter_group.name = (
-                f"{self.identifier}-{self.old_parameter_group.name or 'pg'}"
-            )
-
-            if self.old_parameter_group.name == self.parameter_group.name:
-                msg = "Parameter group and old parameter group have the same name. Assign a name to the new parameter group"
-                raise ValueError(msg)
-
         if (
             self.blue_green_deployment
             and self.blue_green_deployment.target
@@ -400,18 +386,16 @@ class TerraformModuleData(BaseModel):
     @computed_field
     def parameter_groups(self) -> list[ParameterGroup] | None:
         """Parameter groups to create"""
-        pgs = [
-            self.ai_input.data.parameter_group,
-            self.ai_input.data.old_parameter_group,
-        ]
+        parameter_group = self.ai_input.data.parameter_group
+        parameter_groups = [parameter_group] if parameter_group else []
         if (
             self.ai_input.data.blue_green_deployment
             and self.ai_input.data.blue_green_deployment.target
             and (pg := self.ai_input.data.blue_green_deployment.target.parameter_group)
-            and (pg != self.ai_input.data.parameter_group)
+            and (pg != parameter_group)
         ):
-            pgs.append(pg)
-        return list(filter(None, pgs))
+            parameter_groups.append(pg)
+        return parameter_groups
 
     @computed_field
     def reset_password(self) -> str | None:
