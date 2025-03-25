@@ -372,6 +372,19 @@ def test_switchover_blue_green_deployment(mock_rds_client: Mock) -> None:
     )
 
 
+def test_switchover_blue_green_deployment_with_timeout(mock_rds_client: Mock) -> None:
+    """Test switchover_blue_green_deployment"""
+    aws_api = AWSApi()
+    mock_rds_client.switchover_blue_green_deployment.return_value = None
+
+    aws_api.switchover_blue_green_deployment("identifier", timeout=600)
+
+    mock_rds_client.switchover_blue_green_deployment.assert_called_once_with(
+        BlueGreenDeploymentIdentifier="identifier",
+        SwitchoverTimeout=600,
+    )
+
+
 def test_delete_db_instance(mock_rds_client: Mock) -> None:
     """Test delete_db_instance"""
     aws_api = AWSApi()

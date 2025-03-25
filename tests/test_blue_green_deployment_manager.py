@@ -80,6 +80,7 @@ def build_blue_green_deployment_data(
     *,
     enabled: bool = False,
     switchover: bool = False,
+    switchover_timeout: int | None = None,
     delete: bool = False,
     target: dict | None = None,
 ) -> dict:
@@ -89,6 +90,7 @@ def build_blue_green_deployment_data(
             "blue_green_deployment": {
                 "enabled": enabled,
                 "switchover": switchover,
+                "switchover_timeout": switchover_timeout,
                 "delete": delete,
                 "target": DEFAULT_TARGET if target is None else target,
             }
@@ -569,7 +571,8 @@ def test_run_when_switchover(
     else:
         mock_logging.info.assert_called_with("Waiting for condition to be met...")
         mock_aws_api.switchover_blue_green_deployment.assert_called_once_with(
-            "some-bg-id"
+            "some-bg-id",
+            timeout=None,
         )
         assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
@@ -994,6 +997,7 @@ def test_run_when_all_in_one_config(
     additional_data = build_blue_green_deployment_data(
         enabled=True,
         switchover=True,
+        switchover_timeout=600,
         delete=True,
         target={"engine_version": "16.3"},
     )
@@ -1087,7 +1091,8 @@ def test_run_when_all_in_one_config(
             expected_params
         )
         mock_aws_api.switchover_blue_green_deployment.assert_called_once_with(
-            "some-bg-id"
+            "some-bg-id",
+            timeout=600,
         )
         mock_aws_api.delete_db_instance.assert_called_once_with("test-rds-old")
         mock_aws_api.delete_blue_green_deployment.assert_called_once_with("some-bg-id")

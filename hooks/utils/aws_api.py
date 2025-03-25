@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from mypy_boto3_rds.type_defs import (
         DeleteBlueGreenDeploymentRequestTypeDef,
         FilterTypeDef,
+        SwitchoverBlueGreenDeploymentRequestTypeDef,
     )
 from mypy_boto3_rds.type_defs import (
     BlueGreenDeploymentTypeDef,
@@ -152,11 +153,18 @@ class AWSApi:
         )
         return data["BlueGreenDeployments"][0] if data["BlueGreenDeployments"] else None
 
-    def switchover_blue_green_deployment(self, identifier: str) -> None:
+    def switchover_blue_green_deployment(
+        self,
+        identifier: str,
+        timeout: int | None = None,
+    ) -> None:
         """Switchover Blue/Green Deployment"""
-        self.rds_client.switchover_blue_green_deployment(
-            BlueGreenDeploymentIdentifier=identifier
-        )
+        kwargs: SwitchoverBlueGreenDeploymentRequestTypeDef = {
+            "BlueGreenDeploymentIdentifier": identifier,
+        }
+        if timeout is not None:
+            kwargs["SwitchoverTimeout"] = timeout
+        self.rds_client.switchover_blue_green_deployment(**kwargs)
 
     def delete_blue_green_deployment(
         self,
