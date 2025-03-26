@@ -178,6 +178,12 @@ class Rds(RdsAppInterface):
     timeouts: DBInstanceTimeouts | None = None
     blue_green_update: BlueGreenUpdate | None = None
     deletion_protection: bool | None = None
+    allocated_storage: int | None = None
+    engine_version: str | None = None
+    instance_class: str | None = None
+    iops: int | None = None
+    storage_throughput: int | None = None
+    storage_type: str | None = None
 
     @property
     def enhanced_monitoring_role_name(self) -> str:
@@ -358,6 +364,32 @@ class Rds(RdsAppInterface):
             raise ValueError(
                 "blue_green_deployment is not supported for replica instance"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_blue_green_deployment_target(self) -> Self:
+        if (
+            self.blue_green_deployment
+            and self.blue_green_deployment.target
+            and self.blue_green_deployment.enabled
+            and self.blue_green_deployment.switchover
+            and self.blue_green_deployment.delete
+        ):
+            desired_config = BlueGreenDeploymentTarget(
+                allocated_storage=self.allocated_storage,
+                engine_version=self.engine_version,
+                instance_class=self.instance_class,
+                iops=self.iops,
+                storage_throughput=self.storage_throughput,
+                storage_type=self.storage_type,
+                parameter_group=self.parameter_group,
+            ).model_dump()
+            target = self.blue_green_deployment.target.model_dump(exclude_none=True)
+            not_matched = {k: v for k, v in target.items() if desired_config[k] != v}
+            if not_matched:
+                raise ValueError(
+                    f"desired config not match blue_green_deployment.target after delete, update: {not_matched}"
+                )
         return self
 
 

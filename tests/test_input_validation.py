@@ -10,7 +10,7 @@ from er_aws_rds.input import (
     ParameterGroup,
 )
 
-from .conftest import DEFAULT_PARAMETER_GROUP, input_data
+from .conftest import DEFAULT_PARAMETER_GROUP, DEFAULT_TARGET, input_data
 
 
 def test_validate_parameter_rds_replication() -> None:
@@ -65,7 +65,7 @@ def test_blue_green_deployment_parameter_group_default_name() -> None:
             "blue_green_deployment": {
                 "enabled": True,
                 "switchover": True,
-                "delete": True,
+                "delete": False,
                 "target": {
                     "parameter_group": {
                         "family": "postgres16",
@@ -91,7 +91,7 @@ def test_blue_green_deployment_parameter_group_name() -> None:
             "blue_green_deployment": {
                 "enabled": True,
                 "switchover": True,
-                "delete": True,
+                "delete": False,
                 "target": {
                     "parameter_group": {
                         "name": "new-pg",
@@ -312,5 +312,26 @@ def test_validate_blue_green_deployment_for_replica() -> None:
     with pytest.raises(
         ValidationError,
         match=r".*blue_green_deployment is not supported for replica instance.*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)
+
+
+def test_validate_blue_green_deployment_when_desired_config_not_match_target_after_delete() -> (
+    None
+):
+    """Test that desired config not match target after delete"""
+    mod_input = input_data({
+        "data": {
+            "blue_green_deployment": {
+                "enabled": True,
+                "switchover": True,
+                "delete": True,
+                "target": DEFAULT_TARGET,
+            },
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*desired config not match blue_green_deployment.target after delete.*",
     ):
         AppInterfaceInput.model_validate(mod_input)

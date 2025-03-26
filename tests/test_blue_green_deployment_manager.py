@@ -85,6 +85,8 @@ def build_blue_green_deployment_data(
     target: dict | None = None,
 ) -> dict:
     """Build blue/green deployment config data"""
+    if target is None:
+        target = DEFAULT_TARGET
     return {
         "data": {
             "blue_green_deployment": {
@@ -92,8 +94,9 @@ def build_blue_green_deployment_data(
                 "switchover": switchover,
                 "switchover_timeout": switchover_timeout,
                 "delete": delete,
-                "target": DEFAULT_TARGET if target is None else target,
-            }
+                "target": target,
+            },
+            **target,
         }
     }
 

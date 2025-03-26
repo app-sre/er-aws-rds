@@ -106,6 +106,24 @@ DEFAULT_TARGET = {
     "parameter_group": {
         "name": "pg15",
         "family": "postgres15",
+        "description": "Parameter Group for PostgreSQL 15",
+        "parameters": [
+            {
+                "name": "log_statement",
+                "value": "none",
+                "apply_method": "pending-reboot",
+            },
+            {
+                "name": "log_min_duration_statement",
+                "value": "-1",
+                "apply_method": "pending-reboot",
+            },
+            {
+                "name": "log_min_duration_statement",
+                "value": "60000",
+                "apply_method": "pending-reboot",
+            },
+        ],
     },
     "allocated_storage": 20,
     "storage_type": "gp3",
