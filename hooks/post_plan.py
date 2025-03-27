@@ -147,20 +147,13 @@ class RDSPlanValidator:
         changed_actions = {
             Action.ActionCreate,
             Action.ActionUpdate,
-            Action.ActionDelete,
         }
         resource_changes = [
             c
             for c in self.plan.resource_changes
             if c.change and changed_actions.intersection(c.change.actions)
         ]
-        if not resource_changes:
-            return
-        if len(resource_changes) > 1 or not (
-            resource_changes[0].type == "aws_db_parameter_group"
-            and resource_changes[0].change
-            and resource_changes[0].change.actions == [Action.ActionDelete]
-        ):
+        if resource_changes:
             self.errors.append(
                 f"No changes allowed when Blue/Green Deployment enabled, detected changes: {resource_changes}"
             )
