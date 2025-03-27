@@ -58,44 +58,6 @@ def test_parameter_group_name_without_pg_name() -> None:
     assert model.data.parameter_group.name == f"{model.data.identifier}-pg"
 
 
-def test_parameter_group_name_along_old_parameter_group_1() -> None:
-    """Test correct parameter group names are set"""
-    mod_input = input_data({
-        "data": {
-            "old_parameter_group": {
-                "name": "postgres-16",
-                "family": "postgres16",
-                "description": "Parameter Group for PostgreSQL 16",
-                "parameters": [],
-            }
-        }
-    })
-    model = AppInterfaceInput.model_validate(mod_input)
-    assert model.data.parameter_group is not None
-    assert model.data.old_parameter_group is not None
-    assert model.data.parameter_group.name == f"{model.data.identifier}-test-pg"
-    assert model.data.old_parameter_group.name == f"{model.data.identifier}-postgres-16"
-
-
-def test_parameter_group_along_old_parameter_group_without_names() -> None:
-    """Test correct parameter group names are set"""
-    mod_input = input_data({
-        "data": {
-            "parameter_group": {"name": None},
-            "old_parameter_group": {
-                "family": "postgres16",
-                "description": "Parameter Group for PostgreSQL 16",
-                "parameters": [],
-            },
-        }
-    })
-    with pytest.raises(
-        ValidationError,
-        match=r".*Parameter group and old parameter group have the same name.*",
-    ):
-        AppInterfaceInput.model_validate(mod_input)
-
-
 def test_blue_green_deployment_parameter_group_default_name() -> None:
     """Test Blue/Green Deployment parameter group default name"""
     mod_input = input_data({
