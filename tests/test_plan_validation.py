@@ -171,20 +171,6 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
                 "after_unknown": {},
             },
         },
-        {
-            "type": "aws_db_instance",
-            "change": {
-                "actions": ["delete"],
-                "before": {
-                    "id": "some-id",
-                    "name": "test-rds",
-                    "engine": "postgres",
-                    "engine_version": "16.3",
-                },
-                "after": {},
-                "after_unknown": {},
-            },
-        },
     ],
 )
 def test_validate_no_changes_when_blue_green_deployment_enabled(change: dict) -> None:
@@ -214,27 +200,43 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(change: dict) ->
     ]
 
 
-def test_validate_no_changes_allow_parameter_group_delete_when_blue_green_deployment_enabled() -> (
-    None
-):
-    """Test no changes when Blue/Green Deployment is enabled but allow parameter group delete after switchover"""
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_parameter_group",
-                "change": {
-                    "actions": [Action.ActionDelete],
-                    "before": {
-                        "id": "test-rds-pg15",
-                        "name": "test-rds-pg15",
-                        "engine": "postgres",
-                    },
-                    "after": None,
-                    "after_unknown": None,
+@pytest.mark.parametrize(
+    "change",
+    [
+        {
+            "type": "aws_db_instance",
+            "change": {
+                "actions": ["delete"],
+                "before": {
+                    "id": "some-id",
+                    "name": "test-rds",
+                    "engine": "postgres",
+                    "engine_version": "16.3",
                 },
-            }
-        ]
-    })
+                "after": {},
+                "after_unknown": {},
+            },
+        },
+        {
+            "type": "aws_db_parameter_group",
+            "change": {
+                "actions": ["delete"],
+                "before": {
+                    "id": "test-rds-pg15",
+                    "name": "test-rds-pg15",
+                    "engine": "postgres",
+                },
+                "after": {},
+                "after_unknown": {},
+            },
+        },
+    ],
+)
+def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
+    change: dict,
+) -> None:
+    """Test delete is allowed when Blue/Green Deployment is enabled"""
+    plan = Plan.model_validate({"resource_changes": [change]})
     validator = RDSPlanValidator(
         plan,
         input_object({
