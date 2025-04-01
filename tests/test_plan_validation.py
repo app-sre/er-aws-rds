@@ -253,3 +253,51 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
     errors = validator.validate()
 
     assert errors == []
+
+
+def test_validate_parameter_group_on_update() -> None:
+    """Test parameter group update validation"""
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_parameter_group",
+                "change": {
+                    "actions": ["update"],
+                    "before": {
+                        "id": "test-rds-pg15",
+                        "name": "test-rds-pg15",
+                        "engine": "postgres",
+                        "parameter": [
+                            {
+                                "apply_method": "pending-reboot",
+                                "name": "rds.force_ssl",
+                                "value": "1",
+                            },
+                        ],
+                    },
+                    "after": {
+                        "id": "test-rds-pg15",
+                        "name": "test-rds-pg15",
+                        "engine": "postgres",
+                        "parameter": [
+                            {
+                                "apply_method": "immediate",
+                                "name": "rds.force_ssl",
+                                "value": "1",
+                            },
+                        ],
+                    },
+                    "after_unknown": {},
+                },
+            },
+        ]
+    })
+    validator = RDSPlanValidator(plan, input_object())
+
+    errors = validator.validate()
+
+    assert errors == [
+        "Problematic plan changes for parameter group detected, "
+        "apply_method only changes are not allowed, parameters: rds.force_ssl, "
+        "checkout https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+    ]

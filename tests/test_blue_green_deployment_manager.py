@@ -96,8 +96,8 @@ def build_blue_green_deployment_data(
                 "delete": delete,
                 "target": target,
             },
-            **target,
         }
+        | target,
     }
 
 

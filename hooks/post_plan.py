@@ -158,6 +158,51 @@ class RDSPlanValidator:
                 f"No changes allowed when Blue/Green Deployment enabled, detected changes: {resource_changes}"
             )
 
+    @staticmethod
+    def _is_apply_method_change_only(
+        before_parameter: dict[str, str],
+        after_parameter: dict[str, str],
+    ) -> bool:
+        return (
+            before_parameter["name"] == after_parameter["name"]
+            and before_parameter["value"] == after_parameter["value"]
+            and before_parameter["apply_method"] != after_parameter["apply_method"]
+        )
+
+    def _apply_method_change_only_parameter_names(
+        self,
+        change: Change | None,
+    ) -> set[str]:
+        if change is None or not change.before or not change.after:
+            return set()
+        before_parameter_by_name = {
+            parameter["name"]: parameter for parameter in change.before["parameter"]
+        }
+        return {
+            name
+            for after_parameter in change.after["parameter"]
+            if (name := after_parameter.get("name"))
+            and (before_parameter := before_parameter_by_name.get(name))
+            and self._is_apply_method_change_only(before_parameter, after_parameter)
+        }
+
+    def _validate_paramter_group_changes(self) -> None:
+        parameter_group_updates = [
+            c for c in self.resource_updates if c.type == "aws_db_parameter_group"
+        ]
+        apply_method_change_only_parameter_names = {
+            parameter
+            for pg in parameter_group_updates
+            for parameter in self._apply_method_change_only_parameter_names(pg.change)
+        }
+        if apply_method_change_only_parameter_names:
+            parameters = ", ".join(apply_method_change_only_parameter_names)
+            self.errors.append(
+                "Problematic plan changes for parameter group detected, "
+                f"apply_method only changes are not allowed, parameters: {parameters}, "
+                "checkout https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+            )
+
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
         self.errors.clear()
@@ -165,6 +210,7 @@ class RDSPlanValidator:
         self._validate_version_upgrade()
         self._validate_deletion_protection_not_enabled_on_destroy()
         self._validate_no_changes_when_blue_green_deployment_enabled()
+        self._validate_paramter_group_changes()
         return self.errors
 
 
