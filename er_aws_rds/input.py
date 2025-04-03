@@ -11,8 +11,6 @@ from pydantic import (
     model_validator,
 )
 
-from er_aws_rds.errors import RDSLogicalReplicationError
-
 ENHANCED_MONITORING_ROLE_NAME_MAX_LENGTH = 64
 
 
@@ -262,20 +260,6 @@ class Rds(RdsAppInterface):
 
         # No backup for replicas
         self.backup_retention_period = 0
-        return self
-
-    @model_validator(mode="after")
-    def validate_parameter_group_parameters(self) -> Self:
-        """Validate that every parameter complies with our requirements"""
-        if not self.parameter_group:
-            return self
-        for parameter in self.parameter_group.parameters or []:
-            if (
-                parameter.name == "rds.logical_replication"
-                and parameter.apply_method != "pending-reboot"
-            ):
-                msg = "rds.logical_replication must be set to pending-reboot"
-                raise RDSLogicalReplicationError(msg)
         return self
 
     @model_validator(mode="after")

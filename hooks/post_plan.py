@@ -10,6 +10,7 @@ from external_resources_io.terraform import (
     ResourceChange,
     TerraformJsonPlanParser,
 )
+from mypy_boto3_rds.type_defs import ParameterOutputTypeDef
 
 from er_aws_rds.input import (
     AppInterfaceInput,
@@ -172,72 +173,56 @@ class RDSPlanValidator:
             and before_parameter.apply_method != after_parameter.apply_method
         )
 
-    def _get_default_parameter_by_name(
-        self,
-        parameter_group_family: str,
-        parameter_names: list[str],
-    ) -> dict[str, Parameter]:
-        data = self.aws_api.get_engine_default_parameters(
-            parameter_group_family, parameter_names
-        )
-        return {
-            parameter["ParameterName"]: Parameter(
-                name=parameter["ParameterName"],
-                value=parameter.get("ParameterValue", ""),
-                apply_method=parameter.get("ApplyMethod", "pending-reboot"),
-            )
-            for name, parameter in data.items()
-        }
+    def _validate_parameter_group_change(self, change: Change) -> None:
+        if not change.after:
+            return
 
-    def _apply_method_change_only_parameter_names(
-        self,
-        change: Change | None,
-    ) -> set[str]:
-        if change is None or not change.after:
-            return set()
         after_parameter_by_name = {
             parameter["name"]: Parameter.model_validate(parameter)
             for parameter in change.after.get("parameter") or []
         }
+
+        default_parameter_by_name = self.aws_api.get_engine_default_parameters(
+            change.after["family"],
+            list(after_parameter_by_name.keys()),
+        )
+
         before_parameter_by_name = (
             {
                 parameter["name"]: Parameter.model_validate(parameter)
                 for parameter in change.before.get("parameter") or []
             }
             if change.before
-            else self._get_default_parameter_by_name(
-                change.after["family"],
-                list(after_parameter_by_name.keys()),
-            )
+            else {
+                parameter["ParameterName"]: Parameter(
+                    name=parameter["ParameterName"],
+                    value=parameter.get("ParameterValue", ""),
+                    apply_method=parameter.get("ApplyMethod", "pending-reboot"),
+                )
+                for parameter in default_parameter_by_name.values()
+            }
         )
-        return {
+
+        self._validate_apply_method_change_only(
+            before_parameter_by_name, after_parameter_by_name
+        )
+        self._validate_apply_method_with_apply_type(
+            default_parameter_by_name, after_parameter_by_name
+        )
+
+    def _validate_apply_method_change_only(
+        self,
+        before_parameter_by_name: dict[str, Parameter],
+        after_parameter_by_name: dict[str, Parameter],
+    ) -> None:
+        apply_method_change_only_parameter_names = [
             name
             for name in before_parameter_by_name.keys() & after_parameter_by_name.keys()
             if self._is_apply_method_change_only(
                 before_parameter_by_name[name],
                 after_parameter_by_name[name],
             )
-        }
-
-    def _validate_paramter_group_changes(self) -> None:
-        changed_actions = {
-            Action.ActionCreate,
-            Action.ActionUpdate,
-        }
-        changed_parameter_groups = [
-            c
-            for c in self.plan.resource_changes
-            if (
-                c.change
-                and changed_actions.intersection(c.change.actions)
-                and c.type == "aws_db_parameter_group"
-            )
         ]
-        apply_method_change_only_parameter_names = {
-            parameter
-            for pg in changed_parameter_groups
-            for parameter in self._apply_method_change_only_parameter_names(pg.change)
-        }
         if apply_method_change_only_parameter_names:
             parameters = ", ".join(apply_method_change_only_parameter_names)
             self.errors.append(
@@ -246,6 +231,40 @@ class RDSPlanValidator:
                 "checkout https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
             )
 
+    def _validate_apply_method_with_apply_type(
+        self,
+        default_parameter_by_name: dict[str, ParameterOutputTypeDef],
+        after_parameter_by_name: dict[str, Parameter],
+    ) -> None:
+        immediate_on_static_parameter_names = [
+            parameter_name
+            for parameter_name, parameter in after_parameter_by_name.items()
+            if (
+                parameter.apply_method == "immediate"
+                and (default_parameter := default_parameter_by_name.get(parameter_name))
+                and default_parameter.get("ApplyType") == "static"
+            )
+        ]
+        if immediate_on_static_parameter_names:
+            parameters = ", ".join(immediate_on_static_parameter_names)
+            self.errors.append(
+                "cannot use immediate apply method for static parameter, "
+                f"must be set to pending-reboot: {parameters}"
+            )
+
+    def _validate_parameter_group_changes(self) -> None:
+        changed_actions = {
+            Action.ActionCreate,
+            Action.ActionUpdate,
+        }
+        for c in self.plan.resource_changes:
+            if (
+                c.change
+                and changed_actions.intersection(c.change.actions)
+                and c.type == "aws_db_parameter_group"
+            ):
+                self._validate_parameter_group_change(c.change)
+
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
         self.errors.clear()
@@ -253,7 +272,7 @@ class RDSPlanValidator:
         self._validate_version_upgrade()
         self._validate_deletion_protection_not_enabled_on_destroy()
         self._validate_no_changes_when_blue_green_deployment_enabled()
-        self._validate_paramter_group_changes()
+        self._validate_parameter_group_changes()
         return self.errors
 
 
