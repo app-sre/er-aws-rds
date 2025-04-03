@@ -10,7 +10,11 @@ from hooks.utils.models import CreateBlueGreenDeploymentParams
 
 if TYPE_CHECKING:
     from mypy_boto3_rds.type_defs import DBInstanceTypeDef
-from mypy_boto3_rds import RDSClient
+from mypy_boto3_rds import (
+    DescribeDBParametersPaginator,
+    DescribeEngineDefaultParametersPaginator,
+    RDSClient,
+)
 
 
 @pytest.fixture
@@ -338,9 +342,13 @@ def test_get_db_parameters(mock_rds_client: Mock) -> None:
         "ParameterValue": "1",
         "ApplyMethod": "pending-reboot",
     }
-    mock_rds_client.describe_db_parameters.return_value = {
-        "Parameters": [expected_parameter]
-    }
+    mock_paginator = create_autospec(DescribeDBParametersPaginator)
+    mock_paginator.paginate.return_value = [
+        {
+            "Parameters": [expected_parameter],
+        }
+    ]
+    mock_rds_client.get_paginator.return_value = mock_paginator
     expected_result = {"rds.logical_replication": expected_parameter}
 
     result = aws_api.get_db_parameters(
@@ -349,7 +357,8 @@ def test_get_db_parameters(mock_rds_client: Mock) -> None:
     )
 
     assert result == expected_result
-    mock_rds_client.describe_db_parameters.assert_called_once_with(
+    mock_rds_client.get_paginator.assert_called_once_with("describe_db_parameters")
+    mock_paginator.paginate.assert_called_once_with(
         DBParameterGroupName="pg15",
         Filters=[
             {
@@ -368,6 +377,16 @@ def test_get_engine_default_parameters(mock_rds_client: Mock) -> None:
         "ParameterValue": "1",
         "ApplyMethod": "pending-reboot",
     }
+    mock_paginator = create_autospec(DescribeEngineDefaultParametersPaginator)
+    mock_paginator.paginate.return_value = [
+        {
+            "EngineDefaults": {
+                "DBParameterGroupFamily": "postgres15",
+                "Parameters": [expected_parameter],
+            }
+        }
+    ]
+    mock_rds_client.get_paginator.return_value = mock_paginator
     mock_rds_client.describe_engine_default_parameters.return_value = {
         "EngineDefaults": {
             "DBParameterGroupFamily": "postgres15",
@@ -382,7 +401,10 @@ def test_get_engine_default_parameters(mock_rds_client: Mock) -> None:
     )
 
     assert result == expected_result
-    mock_rds_client.describe_engine_default_parameters.assert_called_once_with(
+    mock_rds_client.get_paginator.assert_called_once_with(
+        "describe_engine_default_parameters"
+    )
+    mock_paginator.paginate.assert_called_once_with(
         DBParameterGroupFamily="postgres15",
         Filters=[
             {

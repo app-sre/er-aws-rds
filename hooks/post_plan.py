@@ -182,6 +182,9 @@ class RDSPlanValidator:
             for parameter in change.after.get("parameter") or []
         }
 
+        if not after_parameter_by_name:
+            return
+
         default_parameter_by_name = self.aws_api.get_engine_default_parameters(
             change.after["family"],
             list(after_parameter_by_name.keys()),

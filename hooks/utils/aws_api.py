@@ -13,7 +13,8 @@ from mypy_boto3_rds.type_defs import (
     BlueGreenDeploymentTypeDef,
     DBInstanceTypeDef,
     DBParameterGroupTypeDef,
-    DescribeEngineDefaultParametersMessageTypeDef,
+    DescribeDBParametersMessagePaginateTypeDef,
+    DescribeEngineDefaultParametersMessagePaginateTypeDef,
     ParameterOutputTypeDef,
     UpgradeTargetTypeDef,
 )
@@ -99,27 +100,34 @@ class AWSApi:
     def get_db_parameters(
         self,
         parameter_group_name: str,
-        parameter_names: list[str],
+        parameter_names: list[str] | None = None,
     ) -> dict[str, ParameterOutputTypeDef]:
         """Get DB parameters"""
-        data = self.rds_client.describe_db_parameters(
-            DBParameterGroupName=parameter_group_name,
-            Filters=[
+        kwargs: DescribeDBParametersMessagePaginateTypeDef = {
+            "DBParameterGroupName": parameter_group_name,
+        }
+        if parameter_names:
+            kwargs["Filters"] = [
                 {
                     "Name": "parameter-name",
                     "Values": parameter_names,
                 }
-            ],
-        )
-        return {item["ParameterName"]: item for item in data["Parameters"] or []}
+            ]
+        paginator = self.rds_client.get_paginator("describe_db_parameters")
+        page_iterator = paginator.paginate(**kwargs)
+        return {
+            item["ParameterName"]: item
+            for data in page_iterator
+            for item in data["Parameters"] or []
+        }
 
     def get_engine_default_parameters(
         self,
         parameter_group_family: str,
-        parameter_names: list[str],
+        parameter_names: list[str] | None = None,
     ) -> dict[str, ParameterOutputTypeDef]:
         """Get engine default parameters"""
-        kwargs: DescribeEngineDefaultParametersMessageTypeDef = {
+        kwargs: DescribeEngineDefaultParametersMessagePaginateTypeDef = {
             "DBParameterGroupFamily": parameter_group_family,
         }
         if parameter_names:
@@ -129,9 +137,11 @@ class AWSApi:
                     "Values": parameter_names,
                 }
             ]
-        data = self.rds_client.describe_engine_default_parameters(**kwargs)
+        paginator = self.rds_client.get_paginator("describe_engine_default_parameters")
+        page_iterator = paginator.paginate(**kwargs)
         return {
             item["ParameterName"]: item
+            for data in page_iterator
             for item in data.get("EngineDefaults", {}).get("Parameters") or []
         }
 
