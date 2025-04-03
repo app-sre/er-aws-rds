@@ -13,6 +13,7 @@ from mypy_boto3_rds.type_defs import (
     BlueGreenDeploymentTypeDef,
     DBInstanceTypeDef,
     DBParameterGroupTypeDef,
+    DescribeEngineDefaultParametersMessageTypeDef,
     ParameterOutputTypeDef,
     UpgradeTargetTypeDef,
 )
@@ -111,6 +112,28 @@ class AWSApi:
             ],
         )
         return {item["ParameterName"]: item for item in data["Parameters"] or []}
+
+    def get_engine_default_parameters(
+        self,
+        parameter_group_family: str,
+        parameter_names: list[str],
+    ) -> dict[str, ParameterOutputTypeDef]:
+        """Get engine default parameters"""
+        kwargs: DescribeEngineDefaultParametersMessageTypeDef = {
+            "DBParameterGroupFamily": parameter_group_family,
+        }
+        if parameter_names:
+            kwargs["Filters"] = [
+                {
+                    "Name": "parameter-name",
+                    "Values": parameter_names,
+                }
+            ]
+        data = self.rds_client.describe_engine_default_parameters(**kwargs)
+        return {
+            item["ParameterName"]: item
+            for item in data.get("EngineDefaults", {}).get("Parameters") or []
+        }
 
     def get_db_instance(self, identifier: str) -> DBInstanceTypeDef | None:
         """Get DB instance info"""

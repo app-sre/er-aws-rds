@@ -360,6 +360,39 @@ def test_get_db_parameters(mock_rds_client: Mock) -> None:
     )
 
 
+def test_get_engine_default_parameters(mock_rds_client: Mock) -> None:
+    """Test get_engine_default_parameters"""
+    aws_api = AWSApi()
+    expected_parameter = {
+        "ParameterName": "rds.force_ssl",
+        "ParameterValue": "1",
+        "ApplyMethod": "pending-reboot",
+    }
+    mock_rds_client.describe_engine_default_parameters.return_value = {
+        "EngineDefaults": {
+            "DBParameterGroupFamily": "postgres15",
+            "Parameters": [expected_parameter],
+        }
+    }
+    expected_result = {"rds.force_ssl": expected_parameter}
+
+    result = aws_api.get_engine_default_parameters(
+        parameter_group_family="postgres15",
+        parameter_names=["rds.force_ssl"],
+    )
+
+    assert result == expected_result
+    mock_rds_client.describe_engine_default_parameters.assert_called_once_with(
+        DBParameterGroupFamily="postgres15",
+        Filters=[
+            {
+                "Name": "parameter-name",
+                "Values": ["rds.force_ssl"],
+            }
+        ],
+    )
+
+
 def test_switchover_blue_green_deployment(mock_rds_client: Mock) -> None:
     """Test switchover_blue_green_deployment"""
     aws_api = AWSApi()

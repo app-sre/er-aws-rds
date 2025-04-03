@@ -11,7 +11,10 @@ from external_resources_io.terraform import (
     TerraformJsonPlanParser,
 )
 
-from er_aws_rds.input import AppInterfaceInput
+from er_aws_rds.input import (
+    AppInterfaceInput,
+    Parameter,
+)
 from hooks.utils.aws_api import AWSApi
 from hooks.utils.envvars import RuntimeEnvVars
 from hooks.utils.logger import setup_logging
@@ -160,39 +163,79 @@ class RDSPlanValidator:
 
     @staticmethod
     def _is_apply_method_change_only(
-        before_parameter: dict[str, str],
-        after_parameter: dict[str, str],
+        before_parameter: Parameter,
+        after_parameter: Parameter,
     ) -> bool:
         return (
-            before_parameter["name"] == after_parameter["name"]
-            and before_parameter["value"] == after_parameter["value"]
-            and before_parameter["apply_method"] != after_parameter["apply_method"]
+            before_parameter.name == after_parameter.name
+            and before_parameter.value == after_parameter.value
+            and before_parameter.apply_method != after_parameter.apply_method
         )
+
+    def _get_default_parameter_by_name(
+        self,
+        parameter_group_family: str,
+        parameter_names: list[str],
+    ) -> dict[str, Parameter]:
+        data = self.aws_api.get_engine_default_parameters(
+            parameter_group_family, parameter_names
+        )
+        return {
+            parameter["ParameterName"]: Parameter(
+                name=parameter["ParameterName"],
+                value=parameter.get("ParameterValue", ""),
+                apply_method=parameter.get("ApplyMethod", "pending-reboot"),
+            )
+            for name, parameter in data.items()
+        }
 
     def _apply_method_change_only_parameter_names(
         self,
         change: Change | None,
     ) -> set[str]:
-        if change is None or not change.before or not change.after:
+        if change is None or not change.after:
             return set()
-        before_parameter_by_name = {
-            parameter["name"]: parameter for parameter in change.before["parameter"]
+        after_parameter_by_name = {
+            parameter["name"]: Parameter.model_validate(parameter)
+            for parameter in change.after.get("parameter") or []
         }
+        before_parameter_by_name = (
+            {
+                parameter["name"]: Parameter.model_validate(parameter)
+                for parameter in change.before.get("parameter") or []
+            }
+            if change.before
+            else self._get_default_parameter_by_name(
+                change.after["family"],
+                list(after_parameter_by_name.keys()),
+            )
+        )
         return {
             name
-            for after_parameter in change.after["parameter"]
-            if (name := after_parameter.get("name"))
-            and (before_parameter := before_parameter_by_name.get(name))
-            and self._is_apply_method_change_only(before_parameter, after_parameter)
+            for name in before_parameter_by_name.keys() & after_parameter_by_name.keys()
+            if self._is_apply_method_change_only(
+                before_parameter_by_name[name],
+                after_parameter_by_name[name],
+            )
         }
 
     def _validate_paramter_group_changes(self) -> None:
-        parameter_group_updates = [
-            c for c in self.resource_updates if c.type == "aws_db_parameter_group"
+        changed_actions = {
+            Action.ActionCreate,
+            Action.ActionUpdate,
+        }
+        changed_parameter_groups = [
+            c
+            for c in self.plan.resource_changes
+            if (
+                c.change
+                and changed_actions.intersection(c.change.actions)
+                and c.type == "aws_db_parameter_group"
+            )
         ]
         apply_method_change_only_parameter_names = {
             parameter
-            for pg in parameter_group_updates
+            for pg in changed_parameter_groups
             for parameter in self._apply_method_change_only_parameter_names(pg.change)
         }
         if apply_method_change_only_parameter_names:

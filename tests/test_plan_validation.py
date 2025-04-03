@@ -140,12 +140,30 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
         {
             "type": "aws_db_parameter_group",
             "change": {
-                "actions": ["create"],
-                "before": {},
+                "actions": ["update"],
+                "before": {
+                    "id": "test-rds-pg15",
+                    "name": "test-rds-pg15",
+                    "family": "postgres15",
+                    "parameter": [
+                        {
+                            "apply_method": "pending-reboot",
+                            "name": "rds.force_ssl",
+                            "value": "0",
+                        },
+                    ],
+                },
                 "after": {
                     "id": "test-rds-pg15",
                     "name": "test-rds-pg15",
-                    "engine": "postgres",
+                    "family": "postgres15",
+                    "parameter": [
+                        {
+                            "apply_method": "pending-reboot",
+                            "name": "rds.force_ssl",
+                            "value": "1",
+                        },
+                    ],
                 },
                 "after_unknown": None,
             },
@@ -224,7 +242,7 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(change: dict) ->
                 "before": {
                     "id": "test-rds-pg15",
                     "name": "test-rds-pg15",
-                    "engine": "postgres",
+                    "family": "postgres15",
                 },
                 "after": {},
                 "after_unknown": {},
@@ -266,7 +284,7 @@ def test_validate_parameter_group_on_update() -> None:
                     "before": {
                         "id": "test-rds-pg15",
                         "name": "test-rds-pg15",
-                        "engine": "postgres",
+                        "family": "postgres15",
                         "parameter": [
                             {
                                 "apply_method": "pending-reboot",
@@ -278,7 +296,54 @@ def test_validate_parameter_group_on_update() -> None:
                     "after": {
                         "id": "test-rds-pg15",
                         "name": "test-rds-pg15",
-                        "engine": "postgres",
+                        "family": "postgres15",
+                        "parameter": [
+                            {
+                                "apply_method": "immediate",
+                                "name": "rds.force_ssl",
+                                "value": "1",
+                            },
+                        ],
+                    },
+                    "after_unknown": {},
+                },
+            },
+        ]
+    })
+    validator = RDSPlanValidator(plan, input_object())
+
+    errors = validator.validate()
+
+    assert errors == [
+        "Problematic plan changes for parameter group detected, "
+        "apply_method only changes are not allowed, parameters: rds.force_ssl, "
+        "checkout https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+    ]
+
+
+def test_validate_parameter_group_on_create(
+    mock_aws_api: Mock,
+) -> None:
+    """Test parameter group creation validation"""
+    # ApplyMethod is pending-reboot in default parameter group
+    # but the field is not returend in actual DescribeEngineDefaultParameters response
+    mock_aws_api.return_value.get_engine_default_parameters.return_value = {
+        "rds.force_ssl": {
+            "ParameterName": "rds.force_ssl",
+            "ParameterValue": "1",
+        }
+    }
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_parameter_group",
+                "change": {
+                    "actions": ["create"],
+                    "before": None,
+                    "after": {
+                        "id": "test-rds-pg15",
+                        "name": "test-rds-pg15",
+                        "family": "postgres15",
                         "parameter": [
                             {
                                 "apply_method": "immediate",
