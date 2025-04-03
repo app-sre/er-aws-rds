@@ -229,9 +229,10 @@ class RDSPlanValidator:
         if apply_method_change_only_parameter_names:
             parameters = ", ".join(apply_method_change_only_parameter_names)
             self.errors.append(
-                "Problematic plan changes for parameter group detected, "
-                f"apply_method only changes are not allowed, parameters: {parameters}, "
-                "checkout https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+                f"Problematic plan changes for parameter group detected for parameters: {parameters}. "
+                "Parameter with only apply_method toggled while value is same as before or default is not allowed, "
+                "remove the parameter OR change value OR align apply_method with AWS default pending-reboot, "
+                "checkout details at https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
             )
 
     def _validate_apply_method_with_apply_type(

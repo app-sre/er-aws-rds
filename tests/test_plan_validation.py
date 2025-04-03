@@ -327,9 +327,10 @@ def test_validate_parameter_group_with_apply_method_only_change_on_update(
     errors = validator.validate()
 
     assert errors == [
-        "Problematic plan changes for parameter group detected, "
-        "apply_method only changes are not allowed, parameters: rds.force_ssl, "
-        "checkout https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+        "Problematic plan changes for parameter group detected for parameters: rds.force_ssl. "
+        "Parameter with only apply_method toggled while value is same as before or default is not allowed, "
+        "remove the parameter OR change value OR align apply_method with AWS default pending-reboot, "
+        "checkout details at https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
     ]
 
 
@@ -374,9 +375,10 @@ def test_validate_parameter_group_with_apply_method_only_change_on_create(
     errors = validator.validate()
 
     assert errors == [
-        "Problematic plan changes for parameter group detected, "
-        "apply_method only changes are not allowed, parameters: rds.force_ssl, "
-        "checkout https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+        "Problematic plan changes for parameter group detected for parameters: rds.force_ssl. "
+        "Parameter with only apply_method toggled while value is same as before or default is not allowed, "
+        "remove the parameter OR change value OR align apply_method with AWS default pending-reboot, "
+        "checkout details at https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
     ]
 
 
