@@ -140,12 +140,30 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
         {
             "type": "aws_db_parameter_group",
             "change": {
-                "actions": ["create"],
-                "before": {},
+                "actions": ["update"],
+                "before": {
+                    "id": "test-rds-pg15",
+                    "name": "test-rds-pg15",
+                    "family": "postgres15",
+                    "parameter": [
+                        {
+                            "apply_method": "pending-reboot",
+                            "name": "rds.force_ssl",
+                            "value": "0",
+                        },
+                    ],
+                },
                 "after": {
                     "id": "test-rds-pg15",
                     "name": "test-rds-pg15",
-                    "engine": "postgres",
+                    "family": "postgres15",
+                    "parameter": [
+                        {
+                            "apply_method": "pending-reboot",
+                            "name": "rds.force_ssl",
+                            "value": "1",
+                        },
+                    ],
                 },
                 "after_unknown": None,
             },
@@ -173,8 +191,12 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
         },
     ],
 )
-def test_validate_no_changes_when_blue_green_deployment_enabled(change: dict) -> None:
+def test_validate_no_changes_when_blue_green_deployment_enabled(
+    change: dict,
+    mock_aws_api: Mock,
+) -> None:
     """Test no changes when Blue/Green Deployment is enabled"""
+    mock_aws_api.return_value.get_engine_default_parameters.return_value = {}
     plan = Plan.model_validate({
         "resource_changes": [
             change,
@@ -224,7 +246,7 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(change: dict) ->
                 "before": {
                     "id": "test-rds-pg15",
                     "name": "test-rds-pg15",
-                    "engine": "postgres",
+                    "family": "postgres15",
                 },
                 "after": {},
                 "after_unknown": {},
@@ -253,3 +275,175 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
     errors = validator.validate()
 
     assert errors == []
+
+
+@pytest.mark.parametrize(
+    ("action", "before", "after"),
+    [
+        (
+            "update",
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "pending-reboot",
+                        "name": "rds.force_ssl",
+                        "value": "1",
+                    },
+                ],
+            },
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "immediate",
+                        "name": "rds.force_ssl",
+                        "value": "1",
+                    },
+                ],
+            },
+        ),
+        (
+            "create",
+            None,
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "immediate",
+                        "name": "rds.force_ssl",
+                        "value": "1",
+                    },
+                ],
+            },
+        ),
+    ],
+)
+def test_validate_parameter_group_with_apply_method_only_change(
+    action: str,
+    before: dict[str, Any] | None,
+    after: dict[str, Any],
+    mock_aws_api: Mock,
+) -> None:
+    """Test parameter group validation for apply_method only change"""
+    # ApplyMethod is pending-reboot in default parameter group
+    # but the field is not returned in actual DescribeEngineDefaultParameters response
+    mock_aws_api.return_value.get_engine_default_parameters.return_value = {
+        "rds.force_ssl": {
+            "ParameterName": "rds.force_ssl",
+            "ParameterValue": "1",
+        }
+    }
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_parameter_group",
+                "change": {
+                    "actions": [action],
+                    "before": before,
+                    "after": after,
+                    "after_unknown": {},
+                },
+            },
+        ]
+    })
+    validator = RDSPlanValidator(plan, input_object())
+
+    errors = validator.validate()
+
+    assert errors == [
+        "Problematic plan changes for parameter group detected for parameters: rds.force_ssl. "
+        "Parameter with only apply_method toggled while value is same as before or default is not allowed, "
+        "remove the parameter OR change value OR align apply_method with AWS default pending-reboot, "
+        "checkout details at https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("action", "before", "after"),
+    [
+        (
+            "update",
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "pending-reboot",
+                        "name": "rds.logical_replication",
+                        "value": "0",
+                    },
+                ],
+            },
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "immediate",
+                        "name": "rds.logical_replication",
+                        "value": "1",
+                    },
+                ],
+            },
+        ),
+        (
+            "create",
+            None,
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "immediate",
+                        "name": "rds.logical_replication",
+                        "value": "1",
+                    },
+                ],
+            },
+        ),
+    ],
+)
+def test_validate_parameter_group_with_immediate_for_static_parameter(
+    action: str,
+    before: dict[str, Any] | None,
+    after: dict[str, Any],
+    mock_aws_api: Mock,
+) -> None:
+    """Test parameter group update validation for apply_only_change"""
+    mock_aws_api.return_value.get_engine_default_parameters.return_value = {
+        "rds.logical_replication": {
+            "ParameterName": "rds.logical_replication",
+            "ParameterValue": "0",
+            "ApplyType": "static",
+        }
+    }
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_parameter_group",
+                "change": {
+                    "actions": [action],
+                    "before": before,
+                    "after": after,
+                    "after_unknown": {},
+                },
+            },
+        ]
+    })
+    validator = RDSPlanValidator(plan, input_object())
+
+    errors = validator.validate()
+
+    assert errors == [
+        "cannot use immediate apply method for static parameter, must be set to pending-reboot: rds.logical_replication"
+    ]

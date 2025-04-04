@@ -12,7 +12,7 @@ from er_aws_rds.input import AppInterfaceInput
 
 def deep_merge(dict1: dict[str, Any], dict2: dict[str, Any]) -> dict[str, Any]:
     """Merge two dictionaries recursively"""
-    return dict1.copy() | {
+    return dict1 | {
         key: (
             deep_merge(dict1[key], value)
             if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict)

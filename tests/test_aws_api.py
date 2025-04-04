@@ -9,8 +9,19 @@ from hooks.utils.aws_api import AWSApi
 from hooks.utils.models import CreateBlueGreenDeploymentParams
 
 if TYPE_CHECKING:
-    from mypy_boto3_rds.type_defs import DBInstanceTypeDef
-from mypy_boto3_rds import RDSClient
+    from mypy_boto3_rds.type_defs import (
+        DBInstanceTypeDef,
+    )
+from mypy_boto3_rds import (
+    DescribeDBParametersPaginator,
+    DescribeEngineDefaultParametersPaginator,
+    RDSClient,
+)
+from mypy_boto3_rds.type_defs import (
+    DescribeDBParametersMessagePaginateTypeDef,
+    DescribeEngineDefaultParametersMessagePaginateTypeDef,
+    ParameterOutputTypeDef,
+)
 
 
 @pytest.fixture
@@ -330,34 +341,143 @@ def test_get_db_parameter_group_when_not_found(mock_rds_client: Mock) -> None:
     )
 
 
-def test_get_db_parameters(mock_rds_client: Mock) -> None:
+@pytest.mark.parametrize(
+    ("parameter_names", "expected_parameters", "expected_kwargs"),
+    [
+        (
+            None,
+            {
+                "rds.logical_replication": {
+                    "ParameterName": "rds.logical_replication",
+                    "ParameterValue": "1",
+                    "ApplyMethod": "pending-reboot",
+                },
+            },
+            {"DBParameterGroupName": "pg15"},
+        ),
+        (
+            ["rds.logical_replication", "rds.force_ssl"],
+            {
+                "rds.logical_replication": {
+                    "ParameterName": "rds.logical_replication",
+                    "ParameterValue": "1",
+                    "ApplyMethod": "pending-reboot",
+                },
+                "rds.force_ssl": {
+                    "ParameterName": "rds.force_ssl",
+                    "ParameterValue": "1",
+                    "ApplyMethod": "immediate",
+                },
+            },
+            {
+                "DBParameterGroupName": "pg15",
+                "Filters": [
+                    {
+                        "Name": "parameter-name",
+                        "Values": ["rds.logical_replication", "rds.force_ssl"],
+                    }
+                ],
+            },
+        ),
+    ],
+)
+def test_get_db_parameters(
+    parameter_names: list[str] | None,
+    expected_parameters: dict[str, ParameterOutputTypeDef],
+    expected_kwargs: DescribeDBParametersMessagePaginateTypeDef,
+    mock_rds_client: Mock,
+) -> None:
     """Test get_db_parameters"""
     aws_api = AWSApi()
-    expected_parameter = {
-        "ParameterName": "rds.logical_replication",
-        "ParameterValue": "1",
-        "ApplyMethod": "pending-reboot",
-    }
-    mock_rds_client.describe_db_parameters.return_value = {
-        "Parameters": [expected_parameter]
-    }
-    expected_result = {"rds.logical_replication": expected_parameter}
+    mock_paginator = create_autospec(DescribeDBParametersPaginator)
+    mock_paginator.paginate.return_value = [
+        {
+            "Parameters": [parameter],
+        }
+        for parameter in expected_parameters.values()
+    ]
+    mock_rds_client.get_paginator.return_value = mock_paginator
 
     result = aws_api.get_db_parameters(
         parameter_group_name="pg15",
-        parameter_names=["rds.logical_replication"],
+        parameter_names=parameter_names,
     )
 
-    assert result == expected_result
-    mock_rds_client.describe_db_parameters.assert_called_once_with(
-        DBParameterGroupName="pg15",
-        Filters=[
+    assert result == expected_parameters
+    mock_rds_client.get_paginator.assert_called_once_with("describe_db_parameters")
+    mock_paginator.paginate.assert_called_once_with(**expected_kwargs)
+
+
+@pytest.mark.parametrize(
+    ("parameter_names", "expected_parameters", "expected_kwargs"),
+    [
+        (
+            None,
             {
-                "Name": "parameter-name",
-                "Values": ["rds.logical_replication"],
+                "rds.force_ssl": {
+                    "ParameterName": "rds.force_ssl",
+                    "ParameterValue": "1",
+                    "ApplyMethod": "pending-reboot",
+                },
+            },
+            {"DBParameterGroupFamily": "postgres15"},
+        ),
+        (
+            ["rds.force_ssl", "rds.logical_replication"],
+            {
+                "rds.force_ssl": {
+                    "ParameterName": "rds.force_ssl",
+                    "ParameterValue": "1",
+                    "ApplyMethod": "pending-reboot",
+                },
+                "rds.logical_replication": {
+                    "ParameterName": "rds.logical_replication",
+                    "ParameterValue": "1",
+                    "ApplyMethod": "pending-reboot",
+                },
+            },
+            {
+                "DBParameterGroupFamily": "postgres15",
+                "Filters": [
+                    {
+                        "Name": "parameter-name",
+                        "Values": ["rds.force_ssl", "rds.logical_replication"],
+                    }
+                ],
+            },
+        ),
+    ],
+)
+def test_get_engine_default_parameters(
+    parameter_names: list[str] | None,
+    expected_parameters: dict[str, ParameterOutputTypeDef],
+    expected_kwargs: DescribeEngineDefaultParametersMessagePaginateTypeDef,
+    mock_rds_client: Mock,
+) -> None:
+    """Test get_engine_default_parameters"""
+    aws_api = AWSApi()
+    mock_paginator = create_autospec(DescribeEngineDefaultParametersPaginator)
+    mock_paginator.paginate.return_value = [
+        {
+            "EngineDefaults": {
+                "DBParameterGroupFamily": "postgres15",
+                "Parameters": [parameter],
             }
-        ],
+        }
+        for parameter in expected_parameters.values()
+    ]
+    mock_rds_client.get_paginator.return_value = mock_paginator
+
+    result = aws_api.get_engine_default_parameters(
+        parameter_group_family="postgres15",
+        parameter_names=parameter_names,
     )
+
+    assert result == expected_parameters
+    mock_rds_client.get_paginator.assert_called_once_with(
+        "describe_engine_default_parameters"
+    )
+    mock_paginator.paginate.assert_called_once_with(**expected_kwargs)
 
 
 def test_switchover_blue_green_deployment(mock_rds_client: Mock) -> None:

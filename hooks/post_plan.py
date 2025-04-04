@@ -10,8 +10,12 @@ from external_resources_io.terraform import (
     ResourceChange,
     TerraformJsonPlanParser,
 )
+from mypy_boto3_rds.type_defs import ParameterOutputTypeDef
 
-from er_aws_rds.input import AppInterfaceInput
+from er_aws_rds.input import (
+    AppInterfaceInput,
+    Parameter,
+)
 from hooks.utils.aws_api import AWSApi
 from hooks.utils.envvars import RuntimeEnvVars
 from hooks.utils.logger import setup_logging
@@ -158,6 +162,114 @@ class RDSPlanValidator:
                 f"No changes allowed when Blue/Green Deployment enabled, detected changes: {resource_changes}"
             )
 
+    @staticmethod
+    def _is_apply_method_change_only(
+        before_parameter: Parameter,
+        after_parameter: Parameter,
+    ) -> bool:
+        return (
+            before_parameter.name == after_parameter.name
+            and before_parameter.value == after_parameter.value
+            and before_parameter.apply_method != after_parameter.apply_method
+        )
+
+    def _validate_parameter_group_change(self, change: Change) -> None:
+        if not change.after:
+            return
+
+        after_parameter_by_name = {
+            parameter["name"]: Parameter.model_validate(parameter)
+            for parameter in change.after.get("parameter") or []
+        }
+
+        if not after_parameter_by_name:
+            return
+
+        default_parameter_by_name = self.aws_api.get_engine_default_parameters(
+            change.after["family"],
+            list(after_parameter_by_name.keys()),
+        )
+
+        before_parameter_by_name = (
+            {
+                parameter["name"]: Parameter.model_validate(parameter)
+                for parameter in change.before.get("parameter") or []
+            }
+            if change.before
+            else {
+                parameter["ParameterName"]: Parameter(
+                    name=parameter["ParameterName"],
+                    value=parameter.get("ParameterValue", ""),
+                    apply_method=parameter.get("ApplyMethod", "pending-reboot"),
+                )
+                for parameter in default_parameter_by_name.values()
+            }
+        )
+
+        self._validate_apply_method_change_only(
+            before_parameter_by_name, after_parameter_by_name
+        )
+        self._validate_apply_method_with_apply_type(
+            default_parameter_by_name, after_parameter_by_name
+        )
+
+    def _validate_apply_method_change_only(
+        self,
+        before_parameter_by_name: dict[str, Parameter],
+        after_parameter_by_name: dict[str, Parameter],
+    ) -> None:
+        common_names = before_parameter_by_name.keys() & after_parameter_by_name.keys()
+        apply_method_change_only_parameter_names = [
+            name
+            for name in common_names
+            if self._is_apply_method_change_only(
+                before_parameter_by_name[name],
+                after_parameter_by_name[name],
+            )
+        ]
+        if apply_method_change_only_parameter_names:
+            parameters = ", ".join(apply_method_change_only_parameter_names)
+            self.errors.append(
+                f"Problematic plan changes for parameter group detected for parameters: {parameters}. "
+                "Parameter with only apply_method toggled while value is same as before or default is not allowed, "
+                "remove the parameter OR change value OR align apply_method with AWS default pending-reboot, "
+                "checkout details at https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+            )
+
+    def _validate_apply_method_with_apply_type(
+        self,
+        default_parameter_by_name: dict[str, ParameterOutputTypeDef],
+        after_parameter_by_name: dict[str, Parameter],
+    ) -> None:
+        common_names = default_parameter_by_name.keys() & after_parameter_by_name.keys()
+        immediate_on_static_parameter_names = [
+            name
+            for name in common_names
+            if (
+                after_parameter_by_name[name].apply_method == "immediate"
+                and default_parameter_by_name[name].get("ApplyType") == "static"
+            )
+        ]
+        if immediate_on_static_parameter_names:
+            parameters = ", ".join(immediate_on_static_parameter_names)
+            self.errors.append(
+                "cannot use immediate apply method for static parameter, "
+                f"must be set to pending-reboot: {parameters}"
+            )
+
+    def _validate_parameter_group_changes(self) -> None:
+        changed_actions = {
+            Action.ActionCreate,
+            Action.ActionUpdate,
+        }
+        for c in self.plan.resource_changes:
+            if (
+                c.change
+                and changed_actions.intersection(c.change.actions)
+                and c.type == "aws_db_parameter_group"
+            ):
+                self._validate_parameter_group_change(c.change)
+
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
         self.errors.clear()
@@ -165,6 +277,7 @@ class RDSPlanValidator:
         self._validate_version_upgrade()
         self._validate_deletion_protection_not_enabled_on_destroy()
         self._validate_no_changes_when_blue_green_deployment_enabled()
+        self._validate_parameter_group_changes()
         return self.errors
 
 

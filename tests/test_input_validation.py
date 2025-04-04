@@ -1,7 +1,6 @@
 import pytest
 from pydantic_core import ValidationError
 
-from er_aws_rds.errors import RDSLogicalReplicationError
 from er_aws_rds.input import (
     ENHANCED_MONITORING_ROLE_NAME_MAX_LENGTH,
     AppInterfaceInput,
@@ -11,26 +10,6 @@ from er_aws_rds.input import (
 )
 
 from .conftest import DEFAULT_PARAMETER_GROUP, DEFAULT_TARGET, input_data
-
-
-def test_validate_parameter_rds_replication() -> None:
-    """Test that rds.logical_replication parameter must be set to 'pending-reboot'"""
-    # mod_input = input_data()
-    mod_input = input_data({
-        "data": {
-            "parameter_group": {
-                "parameters": [
-                    {
-                        "name": "rds.logical_replication",
-                        "value": "1",
-                        "apply_method": "immediate",
-                    }
-                ],
-            }
-        }
-    })
-    with pytest.raises(RDSLogicalReplicationError):
-        AppInterfaceInput.model_validate(mod_input)
 
 
 def test_parameter_value_as_string() -> None:
