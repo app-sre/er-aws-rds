@@ -218,9 +218,10 @@ class RDSPlanValidator:
         before_parameter_by_name: dict[str, Parameter],
         after_parameter_by_name: dict[str, Parameter],
     ) -> None:
+        common_names = before_parameter_by_name.keys() & after_parameter_by_name.keys()
         apply_method_change_only_parameter_names = [
             name
-            for name in before_parameter_by_name.keys() & after_parameter_by_name.keys()
+            for name in common_names
             if self._is_apply_method_change_only(
                 before_parameter_by_name[name],
                 after_parameter_by_name[name],
@@ -240,13 +241,13 @@ class RDSPlanValidator:
         default_parameter_by_name: dict[str, ParameterOutputTypeDef],
         after_parameter_by_name: dict[str, Parameter],
     ) -> None:
+        common_names = default_parameter_by_name.keys() & after_parameter_by_name.keys()
         immediate_on_static_parameter_names = [
-            parameter_name
-            for parameter_name, parameter in after_parameter_by_name.items()
+            name
+            for name in common_names
             if (
-                parameter.apply_method == "immediate"
-                and (default_parameter := default_parameter_by_name.get(parameter_name))
-                and default_parameter.get("ApplyType") == "static"
+                after_parameter_by_name[name].apply_method == "immediate"
+                and default_parameter_by_name[name].get("ApplyType") == "static"
             )
         ]
         if immediate_on_static_parameter_names:
