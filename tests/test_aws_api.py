@@ -372,8 +372,13 @@ def test_get_db_parameters(mock_rds_client: Mock) -> None:
 def test_get_engine_default_parameters(mock_rds_client: Mock) -> None:
     """Test get_engine_default_parameters"""
     aws_api = AWSApi()
-    expected_parameter = {
+    expected_parameter_force_ssl = {
         "ParameterName": "rds.force_ssl",
+        "ParameterValue": "1",
+        "ApplyMethod": "pending-reboot",
+    }
+    expected_parameter_logical_replication = {
+        "ParameterName": "rds.logical_replication",
         "ParameterValue": "1",
         "ApplyMethod": "pending-reboot",
     }
@@ -382,22 +387,25 @@ def test_get_engine_default_parameters(mock_rds_client: Mock) -> None:
         {
             "EngineDefaults": {
                 "DBParameterGroupFamily": "postgres15",
-                "Parameters": [expected_parameter],
+                "Parameters": [expected_parameter_force_ssl],
             }
-        }
+        },
+        {
+            "EngineDefaults": {
+                "DBParameterGroupFamily": "postgres15",
+                "Parameters": [expected_parameter_logical_replication],
+            }
+        },
     ]
     mock_rds_client.get_paginator.return_value = mock_paginator
-    mock_rds_client.describe_engine_default_parameters.return_value = {
-        "EngineDefaults": {
-            "DBParameterGroupFamily": "postgres15",
-            "Parameters": [expected_parameter],
-        }
+    expected_result = {
+        "rds.force_ssl": expected_parameter_force_ssl,
+        "rds.logical_replication": expected_parameter_logical_replication,
     }
-    expected_result = {"rds.force_ssl": expected_parameter}
 
     result = aws_api.get_engine_default_parameters(
         parameter_group_family="postgres15",
-        parameter_names=["rds.force_ssl"],
+        parameter_names=["rds.force_ssl", "rds.logical_replication"],
     )
 
     assert result == expected_result
@@ -409,7 +417,7 @@ def test_get_engine_default_parameters(mock_rds_client: Mock) -> None:
         Filters=[
             {
                 "Name": "parameter-name",
-                "Values": ["rds.force_ssl"],
+                "Values": ["rds.force_ssl", "rds.logical_replication"],
             }
         ],
     )
