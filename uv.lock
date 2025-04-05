@@ -45,28 +45,28 @@ rds = [
 
 [[package]]
 name = "botocore"
-version = "1.37.27"
+version = "1.37.28"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/53/3f/597ca9de62d00556a2c387261293441d9e84fa196a7031ec656deffe8aee/botocore-1.37.27.tar.gz", hash = "sha256:143fd7cdb0d73f43aa1f14799124de7b857da7d7ab996af5c89a49e3032a9e66", size = 13800193 }
+sdist = { url = "https://files.pythonhosted.org/packages/92/90/557082a8379ece106b37eb00766efc7a32cbfcdaa0d1d78f38f99eefd218/botocore-1.37.28.tar.gz", hash = "sha256:69ea327f70f0607d174c4c2b1dcc87327b9c48e413c9d322179172b614b28e03", size = 13799915 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/48/f2670866a36d2dd68f7c93897fb9ec6c693bca1bb73cb867a173c2ad92c3/botocore-1.37.27-py3-none-any.whl", hash = "sha256:a86d1ffbe344bfb183d9acc24de3428118fc166cb89d0f1ce1d412857edfacd7", size = 13467344 },
+    { url = "https://files.pythonhosted.org/packages/ea/c3/29ffcb4c90492bcfcff1b7e5ddb5529846acc0e627569432db9842c47675/botocore-1.37.28-py3-none-any.whl", hash = "sha256:c26b645d7b125bf42ffc1671b862b47500ee658e3a1c95d2438cb689fc85df15", size = 13467675 },
 ]
 
 [[package]]
 name = "botocore-stubs"
-version = "1.37.27"
+version = "1.37.28"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "types-awscrt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/29/7e/f04c6a5f101b21b07324609c18473cf17823d1a844d547000aecff9a84d1/botocore_stubs-1.37.27.tar.gz", hash = "sha256:7b36feefdfd2a7457040d43432225adf0b34c46324f5d10291b34fa15587b123", size = 42227 }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/2e/fcc90b0dd4303c65c6125375b89c32afbcadbe7de71902b1a9b0c2479af5/botocore_stubs-1.37.28.tar.gz", hash = "sha256:16c4e5976cb83b863884720350e245ddde73bd39cfe2c948d5ac57c70aaec89e", size = 42236 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/a3/54d59e2da610604c22cefb293639da5f592a27d78e4447e035912cbe47bd/botocore_stubs-1.37.27-py3-none-any.whl", hash = "sha256:c47887b723d2fa595190f09af98f515afdd6654fe8340cbbdff532a5e5ab420f", size = 65569 },
+    { url = "https://files.pythonhosted.org/packages/92/98/8f7d8d9f87af25ce3c7008349f796b56717325c8a7fea005ba16021e3c02/botocore_stubs-1.37.28-py3-none-any.whl", hash = "sha256:adb5376af3f142b01f0f5dd39aa1a155ecc38fd0a0fd070db96ac1c7b8cc16e9", size = 65569 },
 ]
 
 [[package]]
