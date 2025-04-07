@@ -270,6 +270,35 @@ class RDSPlanValidator:
             ):
                 self._validate_parameter_group_change(c.change)
 
+    def _validate_parameter_group_deletion(self) -> None:
+        delete_parameter_group_names = {
+            name
+            for c in self.resource_deletions
+            if c.type == "aws_db_parameter_group"
+            and c.change
+            and c.change.before
+            and (name := c.change.before.get("name"))
+        }
+        aws_db_instance = next(
+            (c for c in self.plan.resource_changes if c.type == "aws_db_instance"),
+            None,
+        )
+        if (
+            aws_db_instance
+            and aws_db_instance.change
+            and aws_db_instance.change.after
+            and (
+                parameter_group_name := aws_db_instance.change.after.get(
+                    "parameter_group_name"
+                )
+            )
+            and parameter_group_name in delete_parameter_group_names
+        ):
+            self.errors.append(
+                f"Cannot delete parameter group {parameter_group_name} via unset parameter_group, specify a different parameter group. "
+                "If this is the preparation for a blue/green deployment on read replica, then unset parameter_group when source instance has enabled blue_green_deployment."
+            )
+
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
         self.errors.clear()
@@ -278,6 +307,7 @@ class RDSPlanValidator:
         self._validate_deletion_protection_not_enabled_on_destroy()
         self._validate_no_changes_when_blue_green_deployment_enabled()
         self._validate_parameter_group_changes()
+        self._validate_parameter_group_deletion()
         return self.errors
 
 

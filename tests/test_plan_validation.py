@@ -447,3 +447,56 @@ def test_validate_parameter_group_with_immediate_for_static_parameter(
     assert errors == [
         "cannot use immediate apply method for static parameter, must be set to pending-reboot: rds.logical_replication"
     ]
+
+
+def test_validate_parameter_group_deletion() -> None:
+    """Test parameter group deletion validation"""
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_instance",
+                "change": {
+                    "actions": ["no-op"],
+                    "before": {
+                        "engine": "postgres",
+                        "engine_version": "15.3",
+                        "parameter_group_name": "test-rds-pg15",
+                    },
+                    "after": {
+                        "engine": "postgres",
+                        "engine_version": "15.3",
+                        "parameter_group_name": "test-rds-pg15",
+                    },
+                    "after_unknown": None,
+                },
+            },
+            {
+                "type": "aws_db_parameter_group",
+                "change": {
+                    "actions": ["delete"],
+                    "before": {
+                        "id": "test-rds-pg15",
+                        "name": "test-rds-pg15",
+                        "family": "postgres15",
+                    },
+                    "after": {},
+                    "after_unknown": {},
+                },
+            },
+        ]
+    })
+    validator = RDSPlanValidator(
+        plan,
+        input_object({
+            "data": {
+                "parameter_group": None,
+            }
+        }),
+    )
+
+    errors = validator.validate()
+
+    assert errors == [
+        "Cannot delete parameter group test-rds-pg15 via unset parameter_group, specify a different parameter group. "
+        "If this is the preparation for a blue/green deployment on read replica, then unset parameter_group when source instance has enabled blue_green_deployment."
+    ]
