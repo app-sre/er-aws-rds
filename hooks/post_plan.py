@@ -222,7 +222,7 @@ class RDSPlanValidator:
                 parameter["name"]: Parameter.model_validate(parameter)
                 for parameter in change.before.get("parameter") or []
             }
-            if change.before
+            if change.before and Action.ActionCreate not in change.actions
             else {
                 parameter["ParameterName"]: Parameter(
                     name=parameter["ParameterName"],

@@ -278,10 +278,10 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
 
 
 @pytest.mark.parametrize(
-    ("action", "before", "after"),
+    ("actions", "before", "after"),
     [
         (
-            "update",
+            ["update"],
             {
                 "id": "test-rds-pg15",
                 "name": "test-rds-pg15",
@@ -308,8 +308,35 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
             },
         ),
         (
-            "create",
+            ["create"],
             None,
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "immediate",
+                        "name": "rds.force_ssl",
+                        "value": "1",
+                    },
+                ],
+            },
+        ),
+        (
+            ["delete", "create"],
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "immediate",
+                        "name": "rds.force_ssl",
+                        "value": "1",
+                    },
+                ],
+            },
             {
                 "id": "test-rds-pg15",
                 "name": "test-rds-pg15",
@@ -326,7 +353,7 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
     ],
 )
 def test_validate_parameter_group_with_apply_method_only_change(
-    action: str,
+    actions: list[str],
     before: dict[str, Any] | None,
     after: dict[str, Any],
     mock_aws_api: Mock,
@@ -345,7 +372,7 @@ def test_validate_parameter_group_with_apply_method_only_change(
             {
                 "type": "aws_db_parameter_group",
                 "change": {
-                    "actions": [action],
+                    "actions": actions,
                     "before": before,
                     "after": after,
                     "after_unknown": {},
