@@ -344,6 +344,10 @@ class Rds(RdsAppInterface):
                 raise ValueError(
                     "deletion_protection must be disabled when replica_source has blue_green_deployment enabled"
                 )
+            if self.region != self.replica_source.region:
+                raise ValueError(
+                    "Cross-region read replicas are not currently supported for Blue Green Deployments"
+                )
         if self.is_read_replica and self.blue_green_deployment:
             raise ValueError(
                 "blue_green_deployment is not supported for replica instance"

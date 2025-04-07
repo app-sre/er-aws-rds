@@ -295,6 +295,27 @@ def test_validate_blue_green_deployment_for_replica() -> None:
         AppInterfaceInput.model_validate(mod_input)
 
 
+def test_validate_blue_green_deployment_for_cross_region_replica() -> None:
+    """Test that cross-region read replicas are not supported for blue green deployments"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment_enabled": True,
+            },
+            "region": "us-west-2",
+            "db_subnet_group_name": "test-subnet-group",
+            "parameter_group": None,
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*Cross-region read replicas are not currently supported for Blue Green Deployments*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)
+
+
 def test_validate_blue_green_deployment_when_desired_config_not_match_target_after_delete() -> (
     None
 ):
