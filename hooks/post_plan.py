@@ -100,6 +100,7 @@ class RDSPlanValidator:
                 continue
             current_version = u.change.before["engine_version"]
             desired_version = u.change.after["engine_version"]
+            db_name = u.change.after["identifier"]
             if current_version != desired_version:
                 valid_upgrade_targets = self.aws_api.get_rds_valid_upgrade_targets(
                     u.change.before["engine"], current_version
@@ -119,6 +120,11 @@ class RDSPlanValidator:
                 ):
                     self.errors.append(
                         "To enable major version upgrade, allow_major_version_upgrade attribute must be set to True"
+                    )
+                # Read replica removal validation
+                if len(u.change.after["replicas"]) > 0:
+                    self.errors.append(
+                        f"The primary database, {db_name}, has a read replica associated with it. Please remove the replica before upgrading the primary database"
                     )
 
     def _validate_deletion_protection_not_enabled_on_destroy(self) -> None:
