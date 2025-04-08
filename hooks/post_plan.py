@@ -204,6 +204,15 @@ class RDSPlanValidator:
         if not change.after:
             return
 
+        parameter_group_name = change.after["name"]
+        if (
+            Action.ActionCreate in change.actions
+            and self.aws_api.get_db_parameter_group(parameter_group_name)
+        ):
+            self.errors.append(
+                f"Parameter group {parameter_group_name} already exists, use a different name"
+            )
+
         after_parameter_by_name = {
             parameter["name"]: Parameter.model_validate(parameter)
             for parameter in change.after.get("parameter") or []

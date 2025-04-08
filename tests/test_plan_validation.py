@@ -367,6 +367,7 @@ def test_validate_parameter_group_with_apply_method_only_change(
             "ParameterValue": "1",
         }
     }
+    mock_aws_api.return_value.get_db_parameter_group.return_value = None
     plan = Plan.model_validate({
         "resource_changes": [
             {
@@ -454,6 +455,7 @@ def test_validate_parameter_group_with_immediate_for_static_parameter(
             "ApplyType": "static",
         }
     }
+    mock_aws_api.return_value.get_db_parameter_group.return_value = None
     plan = Plan.model_validate({
         "resource_changes": [
             {
@@ -526,4 +528,39 @@ def test_validate_parameter_group_deletion() -> None:
     assert errors == [
         "Cannot delete parameter group test-rds-pg15 via unset parameter_group, specify a different parameter group. "
         "If this is the preparation for a blue/green deployment on read replica, then unset parameter_group when source instance has enabled blue_green_deployment."
+    ]
+
+
+def test_validate_parameter_group_name_already_exists(
+    mock_aws_api: Mock,
+) -> None:
+    """Test parameter group name already exists"""
+    mock_aws_api.return_value.get_db_parameter_group.return_value = {
+        "DBParameterGroupName": "test-rds-pg15",
+        "DBParameterGroupFamily": "postgres15",
+    }
+
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_parameter_group",
+                "change": {
+                    "actions": ["create"],
+                    "before": None,
+                    "after": {
+                        "id": "test-rds-pg15",
+                        "name": "test-rds-pg15",
+                        "family": "postgres15",
+                    },
+                    "after_unknown": {},
+                },
+            },
+        ]
+    })
+    validator = RDSPlanValidator(plan, input_object())
+
+    errors = validator.validate()
+
+    assert errors == [
+        "Parameter group test-rds-pg15 already exists, use a different name"
     ]
