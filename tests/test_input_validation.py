@@ -240,7 +240,9 @@ def test_validate_blue_green_deployment_for_replica_with_parameter_group() -> No
             "replica_source": {
                 "identifier": "test-rds-source",
                 "region": "us-east-1",
-                "blue_green_deployment_enabled": True,
+                "blue_green_deployment": {
+                    "enabled": True,
+                },
             },
             "parameter_group": DEFAULT_PARAMETER_GROUP,
         }
@@ -259,7 +261,9 @@ def test_validate_blue_green_deployment_for_replica_with_deletion_protection() -
             "replica_source": {
                 "identifier": "test-rds-source",
                 "region": "us-east-1",
-                "blue_green_deployment_enabled": True,
+                "blue_green_deployment": {
+                    "enabled": True,
+                },
             },
             "parameter_group": None,
             "deletion_protection": True,
@@ -279,7 +283,9 @@ def test_validate_blue_green_deployment_for_replica() -> None:
             "replica_source": {
                 "identifier": "test-rds-source",
                 "region": "us-east-1",
-                "blue_green_deployment_enabled": False,
+                "blue_green_deployment": {
+                    "enabled": False,
+                },
             },
             "blue_green_deployment": {
                 "enabled": False,
@@ -302,7 +308,9 @@ def test_validate_blue_green_deployment_for_cross_region_replica() -> None:
             "replica_source": {
                 "identifier": "test-rds-source",
                 "region": "us-east-1",
-                "blue_green_deployment_enabled": True,
+                "blue_green_deployment": {
+                    "enabled": True,
+                },
             },
             "region": "us-west-2",
             "db_subnet_group_name": "test-subnet-group",

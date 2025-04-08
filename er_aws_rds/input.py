@@ -65,14 +65,6 @@ class ParameterGroup(BaseModel):
     parameters: list[Parameter] | None = Field(default=None)
 
 
-class ReplicaSource(BaseModel):
-    "AppInterface ReplicaSource"
-
-    region: str
-    identifier: str
-    blue_green_deployment_enabled: bool
-
-
 class BlueGreenDeploymentTarget(BaseModel):
     "AppInterface BlueGreenDeployment.Target"
 
@@ -93,6 +85,14 @@ class BlueGreenDeployment(BaseModel):
     delete: bool | None = None
     switchover_timeout: int | None = None
     target: BlueGreenDeploymentTarget | None = None
+
+
+class ReplicaSource(BaseModel):
+    "AppInterface ReplicaSource"
+
+    region: str
+    identifier: str
+    blue_green_deployment: BlueGreenDeployment | None = None
 
 
 class DBInstanceTimeouts(BaseModel):
@@ -335,7 +335,11 @@ class Rds(RdsAppInterface):
 
     @model_validator(mode="after")
     def _validate_blue_green_deployment_for_replica(self) -> Self:
-        if self.replica_source and self.replica_source.blue_green_deployment_enabled:
+        if (
+            self.replica_source
+            and self.replica_source.blue_green_deployment
+            and self.replica_source.blue_green_deployment.enabled
+        ):
             if self.parameter_group:
                 raise ValueError(
                     "parameter_group is not supported when replica_source has blue_green_deployment enabled"
