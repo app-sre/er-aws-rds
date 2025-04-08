@@ -276,6 +276,32 @@ def test_validate_blue_green_deployment_for_replica_with_deletion_protection() -
         AppInterfaceInput.model_validate(mod_input)
 
 
+def test_validate_blue_green_deployment_for_replica_when_desired_config_not_match_target() -> (
+    None
+):
+    """Test replica desired config match target"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+                "blue_green_deployment": {
+                    "enabled": True,
+                    "switchover": True,
+                    "delete": True,
+                    "target": DEFAULT_TARGET,
+                },
+            },
+            "parameter_group": None,
+        }
+    })
+    with pytest.raises(
+        ValidationError,
+        match=r".*desired config not match replica_source blue_green_deployment.target, update engine_version: 15.7.*",
+    ):
+        AppInterfaceInput.model_validate(mod_input)
+
+
 def test_validate_blue_green_deployment_for_replica() -> None:
     """Test that blue_green_deployment is not supported for replica instance"""
     mod_input = input_data({
