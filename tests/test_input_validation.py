@@ -295,9 +295,12 @@ def test_validate_blue_green_deployment_for_replica_when_desired_config_not_matc
             "parameter_group": None,
         }
     })
+    expected_not_matched = {
+        "engine_version": "15.7",
+    }
     with pytest.raises(
         ValidationError,
-        match=r".*desired config not match replica_source blue_green_deployment.target, update engine_version: 15.7.*",
+        match=rf".*desired config not match replica_source blue_green_deployment.target, update: {expected_not_matched}.*",
     ):
         AppInterfaceInput.model_validate(mod_input)
 
@@ -366,6 +369,6 @@ def test_validate_blue_green_deployment_when_desired_config_not_match_target_aft
     })
     with pytest.raises(
         ValidationError,
-        match=r".*desired config not match blue_green_deployment.target after delete.*",
+        match=r".*desired config not match blue_green_deployment.target after delete, update: .*",
     ):
         AppInterfaceInput.model_validate(mod_input)

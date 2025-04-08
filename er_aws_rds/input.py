@@ -373,8 +373,11 @@ class Rds(RdsAppInterface):
                 and (engine_version := blue_green_deployment.target.engine_version)
                 and engine_version != self.engine_version
             ):
+                not_matched = {
+                    "engine_version": engine_version,
+                }
                 raise ValueError(
-                    f"desired config not match replica_source blue_green_deployment.target, update engine_version: {engine_version}"
+                    f"desired config not match replica_source blue_green_deployment.target, update: {not_matched}"
                 )
         if self.is_read_replica and self.blue_green_deployment:
             raise ValueError(
