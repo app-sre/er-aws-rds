@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import sys
+from collections.abc import Iterable, Iterator
 
 from external_resources_io.input import parse_model, read_input_from_file
 from external_resources_io.terraform import (
@@ -46,41 +47,69 @@ class RDSPlanValidator:
             if Action.ActionCreate in c.actions
         ]
 
+    @staticmethod
+    def _filter_by_actions(
+        resource_changes: Iterable[ResourceChange],
+        actions: set[Action],
+    ) -> Iterator[ResourceChange]:
+        return (
+            c
+            for c in resource_changes
+            if c.change and actions.intersection(c.change.actions)
+        )
+
+    @staticmethod
+    def _filter_by_type(
+        resource_changes: Iterable[ResourceChange],
+        resource_type: str,
+    ) -> Iterator[ResourceChange]:
+        return (c for c in resource_changes if c.type == resource_type)
+
     @property
     def resource_updates(self) -> list[ResourceChange]:
-        return [
-            c
-            for c in self.plan.resource_changes
-            if c.change and Action.ActionUpdate in c.change.actions
-        ]
+        return list(
+            self._filter_by_actions(self.plan.resource_changes, {Action.ActionUpdate})
+        )
 
     @property
     def resource_deletions(self) -> list[ResourceChange]:
-        return [
-            c
-            for c in self.plan.resource_changes
-            if c.change and Action.ActionDelete in c.change.actions
-        ]
+        return list(
+            self._filter_by_actions(self.plan.resource_changes, {Action.ActionDelete})
+        )
 
     @property
     def resource_creations(self) -> list[ResourceChange]:
-        return [
-            c
-            for c in self.plan.resource_changes
-            if c.change and Action.ActionCreate in c.change.actions
-        ]
+        return list(
+            self._filter_by_actions(self.plan.resource_changes, {Action.ActionCreate})
+        )
+
+    @property
+    def aws_db_instances(self) -> Iterator[ResourceChange]:
+        return self._filter_by_type(self.plan.resource_changes, "aws_db_instance")
 
     @property
     def aws_db_instance_creations(self) -> list[ResourceChange]:
-        return [c for c in self.resource_creations if c.type == "aws_db_instance"]
+        return list(
+            self._filter_by_actions(self.aws_db_instances, {Action.ActionCreate})
+        )
 
     @property
     def aws_db_instance_updates(self) -> list[ResourceChange]:
-        return [c for c in self.resource_updates if c.type == "aws_db_instance"]
+        return list(
+            self._filter_by_actions(self.aws_db_instances, {Action.ActionUpdate})
+        )
 
     @property
     def aws_db_instance_deletions(self) -> list[ResourceChange]:
-        return [c for c in self.resource_deletions if c.type == "aws_db_instance"]
+        return list(
+            self._filter_by_actions(self.aws_db_instances, {Action.ActionDelete})
+        )
+
+    @property
+    def aws_db_parameter_groups(self) -> Iterator[ResourceChange]:
+        return self._filter_by_type(
+            self.plan.resource_changes, "aws_db_parameter_group"
+        )
 
     def _validate_version_on_create(self) -> None:
         """Validates the RDS instance desired version (new instance)"""
@@ -152,11 +181,9 @@ class RDSPlanValidator:
             Action.ActionCreate,
             Action.ActionUpdate,
         }
-        resource_changes = [
-            c
-            for c in self.plan.resource_changes
-            if c.change and changed_actions.intersection(c.change.actions)
-        ]
+        resource_changes = list(
+            self._filter_by_actions(self.plan.resource_changes, changed_actions)
+        )
         if resource_changes:
             self.errors.append(
                 f"No changes allowed when Blue/Green Deployment enabled, detected changes: {resource_changes}"
@@ -262,13 +289,38 @@ class RDSPlanValidator:
             Action.ActionCreate,
             Action.ActionUpdate,
         }
-        for c in self.plan.resource_changes:
-            if (
-                c.change
-                and changed_actions.intersection(c.change.actions)
-                and c.type == "aws_db_parameter_group"
-            ):
+        for c in self._filter_by_actions(self.aws_db_parameter_groups, changed_actions):
+            if c.change:
                 self._validate_parameter_group_change(c.change)
+
+    def _validate_parameter_group_deletion(self) -> None:
+        delete_parameter_group_names = {
+            name
+            for c in self._filter_by_actions(
+                self.aws_db_parameter_groups,
+                {Action.ActionDelete},
+            )
+            if c.change and c.change.before and (name := c.change.before.get("name"))
+        }
+        aws_db_instance = next(
+            self.aws_db_instances,
+            None,
+        )
+        if (
+            aws_db_instance
+            and aws_db_instance.change
+            and aws_db_instance.change.after
+            and (
+                parameter_group_name := aws_db_instance.change.after.get(
+                    "parameter_group_name"
+                )
+            )
+            and parameter_group_name in delete_parameter_group_names
+        ):
+            self.errors.append(
+                f"Cannot delete parameter group {parameter_group_name} via unset parameter_group, specify a different parameter group. "
+                "If this is the preparation for a blue/green deployment on read replica, then unset parameter_group when source instance has enabled blue_green_deployment."
+            )
 
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
@@ -278,6 +330,7 @@ class RDSPlanValidator:
         self._validate_deletion_protection_not_enabled_on_destroy()
         self._validate_no_changes_when_blue_green_deployment_enabled()
         self._validate_parameter_group_changes()
+        self._validate_parameter_group_deletion()
         return self.errors
 
 
