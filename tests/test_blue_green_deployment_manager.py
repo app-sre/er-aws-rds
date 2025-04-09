@@ -1121,7 +1121,9 @@ def test_run_for_read_replica_has_blue_green_deployment_enabled(
             "replica_source": {
                 "identifier": "test-rds-source",
                 "region": "us-east-1",
-                "blue_green_deployment_enabled": True,
+                "blue_green_deployment": {
+                    "enabled": True,
+                },
             },
             "parameter_group": None,
         }

@@ -65,14 +65,6 @@ class ParameterGroup(BaseModel):
     parameters: list[Parameter] | None = Field(default=None)
 
 
-class ReplicaSource(BaseModel):
-    "AppInterface ReplicaSource"
-
-    region: str
-    identifier: str
-    blue_green_deployment_enabled: bool
-
-
 class BlueGreenDeploymentTarget(BaseModel):
     "AppInterface BlueGreenDeployment.Target"
 
@@ -93,6 +85,14 @@ class BlueGreenDeployment(BaseModel):
     delete: bool | None = None
     switchover_timeout: int | None = None
     target: BlueGreenDeploymentTarget | None = None
+
+
+class ReplicaSource(BaseModel):
+    "AppInterface ReplicaSource"
+
+    region: str
+    identifier: str
+    blue_green_deployment: BlueGreenDeployment | None = None
 
 
 class DBInstanceTimeouts(BaseModel):
@@ -335,7 +335,25 @@ class Rds(RdsAppInterface):
 
     @model_validator(mode="after")
     def _validate_blue_green_deployment_for_replica(self) -> Self:
-        if self.replica_source and self.replica_source.blue_green_deployment_enabled:
+        """
+        Validate the blue_green_deployment for read replicas
+
+        * blue_green_deployment is not supported for read replica instance (only supported for primary instance)
+        * If the replica_source has blue_green_deployment enabled
+          * parameter_group must be None
+          * deletion_protection must be False
+          * region must match replica_source region
+          * engine_version must match replica_source engine_version if specified in target after switchover and delete,
+            note only engine_version is applied to all instances,
+            instance-class is supposed to be applied to all instances but actually only applied to primary instance,
+            so we only validate engine_version.
+            doc: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/blue-green-deployments-creating.html#create-blue-green-settings
+        """
+        if (
+            self.replica_source
+            and (blue_green_deployment := self.replica_source.blue_green_deployment)
+            and blue_green_deployment.enabled
+        ):
             if self.parameter_group:
                 raise ValueError(
                     "parameter_group is not supported when replica_source has blue_green_deployment enabled"
@@ -347,6 +365,19 @@ class Rds(RdsAppInterface):
             if self.region != self.replica_source.region:
                 raise ValueError(
                     "Cross-region read replicas are not currently supported for Blue Green Deployments"
+                )
+            if (
+                blue_green_deployment.switchover
+                and blue_green_deployment.delete
+                and blue_green_deployment.target
+                and (engine_version := blue_green_deployment.target.engine_version)
+                and engine_version != self.engine_version
+            ):
+                not_matched = {
+                    "engine_version": engine_version,
+                }
+                raise ValueError(
+                    f"desired config not match replica_source blue_green_deployment.target, update: {not_matched}"
                 )
         if self.is_read_replica and self.blue_green_deployment:
             raise ValueError(

@@ -1,6 +1,6 @@
 [project]
 name = "er-aws-rds"
-version = "0.6.7"
+version = "0.6.8"
 description = "ERv2 module for managing AWS rds instances"
 authors = [{ name = "AppSRE", email = "sd-app-sre@redhat.com" }]
 license = { text = "Apache 2.0" }
