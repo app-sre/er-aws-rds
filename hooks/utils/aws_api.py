@@ -94,7 +94,12 @@ class AWSApi:
 
     def get_db_parameter_group(self, name: str) -> DBParameterGroupTypeDef | None:
         """Get DB parameter group info"""
-        data = self.rds_client.describe_db_parameter_groups(DBParameterGroupName=name)
+        try:
+            data = self.rds_client.describe_db_parameter_groups(
+                DBParameterGroupName=name
+            )
+        except self.rds_client.exceptions.DBParameterGroupNotFoundFault:
+            return None
         return data["DBParameterGroups"][0] if data["DBParameterGroups"] else None
 
     def get_db_parameters(

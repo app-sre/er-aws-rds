@@ -332,6 +332,15 @@ def test_get_db_parameter_group_when_not_found(mock_rds_client: Mock) -> None:
     mock_rds_client.describe_db_parameter_groups.return_value = {
         "DBParameterGroups": []
     }
+    mock_rds_client.exceptions.DBParameterGroupNotFoundFault = ClientError
+    mock_rds_client.describe_db_parameter_groups.side_effect = ClientError(
+        error_response={
+            "Error": {
+                "Code": "DBParameterGroupNotFound",
+            },
+        },
+        operation_name="DescribeDBParameterGroups",
+    )
 
     result = aws_api.get_db_parameter_group("name")
 
