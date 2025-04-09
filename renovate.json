@@ -1,17 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>app-sre/shared-pipelines//renovate/default.json"],
-  "packageRules": [
-    {
-      "groupName": "all non-major {{manager}} dependencies",
-      "groupSlug": "all-minor-patch-{{manager}}",
-      "matchPackageNames": [
-        "*"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ]
-    }
-  ]
+  "extends": ["github>app-sre/shared-pipelines//renovate/default.json"]
 }
