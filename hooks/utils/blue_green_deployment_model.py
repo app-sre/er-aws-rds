@@ -105,10 +105,9 @@ class BlueGreenDeploymentModel(BaseModel):
     @model_validator(mode="after")
     def _validate_deletion_protection(self) -> Self:
         if self.db_instance and self.db_instance["DeletionProtection"]:
-            if not self.input_data.deletion_protection:
-                self._pending_prepares.add(PendingPrepare.DELETION_PROTECTION)
-            else:
+            if self.input_data.deletion_protection:
                 raise ValueError("deletion_protection must be disabled")
+            self._pending_prepares.add(PendingPrepare.DELETION_PROTECTION)
         return self
 
     @model_validator(mode="after")

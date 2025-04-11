@@ -218,7 +218,7 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(
     errors = validator.validate()
 
     assert errors == [
-        f"No changes allowed when sync after Blue/Green Deployment completed, detected changes: {plan.resource_changes}"
+        f"There are pending resource changes after a Blue/Green Deployment. This should not happen. Detected changes: {plan.resource_changes}"
     ]
 
 

@@ -187,7 +187,7 @@ class RDSPlanValidator:
         )
         if resource_changes:
             self.errors.append(
-                f"There are pending resource changes after a Blue/Green Deployment.  This should not happen. Detected changes: {resource_changes}"
+                f"There are pending resource changes after a Blue/Green Deployment. This should not happen. Detected changes: {resource_changes}"
             )
 
     @staticmethod
