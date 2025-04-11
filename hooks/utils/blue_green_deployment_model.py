@@ -9,9 +9,9 @@ from mypy_boto3_rds.type_defs import (
     ParameterOutputTypeDef,
     UpgradeTargetTypeDef,
 )
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, SkipValidation, model_validator
 
-from er_aws_rds.input import BlueGreenDeployment, BlueGreenDeploymentTarget
+from er_aws_rds.input import BlueGreenDeployment, BlueGreenDeploymentTarget, Rds
 from hooks.utils.models import (
     ActionType,
     BaseAction,
@@ -21,6 +21,7 @@ from hooks.utils.models import (
     DeleteSourceDBInstanceAction,
     DeleteWithoutSwitchoverAction,
     NoOpAction,
+    PendingPrepare,
     State,
     SwitchoverAction,
     WaitForAvailableAction,
@@ -35,16 +36,17 @@ POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME = "rds.logical_replication"
 
 class BlueGreenDeploymentModel(BaseModel):
     state: State
-    db_instance_identifier: str
-    config: BlueGreenDeployment
+    input_data: SkipValidation[
+        Rds
+    ]  # Rds validator has side effects on parameter group name, skip validation since already validated
     db_instance: DBInstanceTypeDef | None = None
     target_db_parameter_group: DBParameterGroupTypeDef | None = None
     blue_green_deployment: BlueGreenDeploymentTypeDef | None = None
     source_db_instances: list[DBInstanceTypeDef] = []
     target_db_instances: list[DBInstanceTypeDef] = []
     source_db_parameters: dict[str, ParameterOutputTypeDef] = {}
-    tags: dict[str, str] | None = None
     valid_upgrade_targets: dict[str, UpgradeTargetTypeDef] = {}
+    _pending_prepares: set[PendingPrepare] = set()
 
     @model_validator(mode="after")
     def _init_state(self) -> Self:
@@ -78,10 +80,16 @@ class BlueGreenDeploymentModel(BaseModel):
                 raise ValueError(f"Unexpected Blue/Green Deployment status: {status}")
         return self
 
+    @property
+    def config(self) -> BlueGreenDeployment:
+        """Get BlueGreenDeployment input config"""
+        assert self.input_data.blue_green_deployment
+        return self.input_data.blue_green_deployment
+
     @model_validator(mode="after")
     def _validate_db_instance_exist(self) -> Self:
         if self.db_instance is None:
-            raise ValueError(f"DB Instance not found: {self.db_instance_identifier}")
+            raise ValueError(f"DB Instance not found: {self.input_data.identifier}")
         return self
 
     @model_validator(mode="after")
@@ -89,24 +97,29 @@ class BlueGreenDeploymentModel(BaseModel):
         if (
             self.config.target
             and self.config.target.parameter_group
-            and (parameter_group_name := self.config.target.parameter_group.name)
             and self.target_db_parameter_group is None
         ):
-            raise ValueError(
-                f"Target Parameter Group not found: {parameter_group_name}"
-            )
+            self._pending_prepares.add(PendingPrepare.TARGET_PARAMETER_GROUP)
         return self
 
     @model_validator(mode="after")
     def _validate_deletion_protection(self) -> Self:
         if self.db_instance and self.db_instance["DeletionProtection"]:
-            raise ValueError("deletion_protection must be disabled")
+            if self.input_data.deletion_protection:
+                raise ValueError("deletion_protection must be disabled")
+            self._pending_prepares.add(PendingPrepare.DELETION_PROTECTION)
         return self
 
     @model_validator(mode="after")
     def _validate_backup_retention_period(self) -> Self:
         if self.db_instance and self.db_instance["BackupRetentionPeriod"] <= 0:
-            raise ValueError("backup_retention_period must be greater than 0")
+            if (
+                self.input_data.backup_retention_period
+                and self.input_data.backup_retention_period > 0
+            ):
+                self._pending_prepares.add(PendingPrepare.BACKUP_RETENTION_PERIOD)
+            else:
+                raise ValueError("backup_retention_period must be greater than 0")
         return self
 
     @model_validator(mode="after")
@@ -178,6 +191,11 @@ class BlueGreenDeploymentModel(BaseModel):
                 "Source Parameter Group rds.logical_replication must be 1 for major version upgrade"
             )
         return self
+
+    @property
+    def pending_prepares(self) -> set[PendingPrepare]:
+        """Get pending prepares."""
+        return self._pending_prepares
 
     def plan_actions(self) -> list[BaseAction]:
         """Plan Actions"""
@@ -377,7 +395,7 @@ class BlueGreenDeploymentModel(BaseModel):
         return CreateAction(
             type=ActionType.CREATE,
             payload=CreateBlueGreenDeploymentParams(
-                name=self.db_instance_identifier,
+                name=self.input_data.identifier,
                 source_arn=self.db_instance["DBInstanceArn"],
                 allocated_storage=target.allocated_storage,
                 engine_version=target.engine_version,
@@ -386,7 +404,7 @@ class BlueGreenDeploymentModel(BaseModel):
                 parameter_group_name=parameter_group_name,
                 storage_throughput=target.storage_throughput,
                 storage_type=target.storage_type,
-                tags=self.tags,
+                tags=self.input_data.tags,
             ),
             next_state=State.PROVISIONING,
         )
