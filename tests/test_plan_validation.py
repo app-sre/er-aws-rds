@@ -218,7 +218,7 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(
     errors = validator.validate()
 
     assert errors == [
-        f"No changes allowed when Blue/Green Deployment enabled, detected changes: {plan.resource_changes}"
+        f"No changes allowed when sync after Blue/Green Deployment completed, detected changes: {plan.resource_changes}"
     ]
 
 
@@ -267,6 +267,53 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
                     "enabled": True,
                     "switchover": True,
                     "delete": True,
+                }
+            }
+        }),
+    )
+
+    errors = validator.validate()
+
+    assert errors == []
+
+
+def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_delete() -> (
+    None
+):
+    """Test no changes when Blue/Green Deployment is enabled"""
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_instance",
+                "change": {
+                    "actions": ["update"],
+                    "before": {
+                        "id": "some-id",
+                        "name": "test-rds",
+                        "engine": "postgres",
+                        "engine_version": "15.7",
+                        "deletion_protection": True,
+                    },
+                    "after": {
+                        "id": "test-rds-pg15",
+                        "name": "test-rds-pg15",
+                        "engine": "postgres",
+                        "engine_version": "15.7",
+                        "deletion_protection": False,
+                    },
+                    "after_unknown": {},
+                },
+            },
+        ]
+    })
+    validator = RDSPlanValidator(
+        plan,
+        input_object({
+            "data": {
+                "blue_green_deployment": {
+                    "enabled": True,
+                    "switchover": True,
+                    "delete": False,
                 }
             }
         }),

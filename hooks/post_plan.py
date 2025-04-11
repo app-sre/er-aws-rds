@@ -175,6 +175,7 @@ class RDSPlanValidator:
         if (
             self.input.data.blue_green_deployment is None
             or not self.input.data.blue_green_deployment.enabled
+            or not self.input.data.blue_green_deployment.delete
         ):
             return
         changed_actions = {
@@ -186,7 +187,7 @@ class RDSPlanValidator:
         )
         if resource_changes:
             self.errors.append(
-                f"No changes allowed when Blue/Green Deployment enabled, detected changes: {resource_changes}"
+                f"No changes allowed when sync after Blue/Green Deployment completed, detected changes: {resource_changes}"
             )
 
     @staticmethod
