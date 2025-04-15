@@ -1,6 +1,5 @@
 .docker/
 module/.terraform/
-module/.terraform*
 module/*.tftest.hcl
 module/backend.tf
 module/terraform.tfvars.json
