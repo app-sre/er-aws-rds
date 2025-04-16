@@ -99,7 +99,7 @@ wheels = [
 
 [[package]]
 name = "er-aws-rds"
-version = "0.6.9"
+version = "0.6.10"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },

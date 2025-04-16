@@ -26,6 +26,15 @@ This will auto create a `venv`, to activate in shell:
 source .venv/bin/activate
 ```
 
+### Manage Terraform Providers
+
+* update versions in [versions.tf](./module/versions.tf)
+* refresh [.terraform.lock.hcl](./module/.terraform.lock.hcl) with:
+
+  ```shell
+  make providers-lock
+  ```
+
 ## Debugging
 
 Export `input.json` via `qontract-cli` and place it in the current project root dir.

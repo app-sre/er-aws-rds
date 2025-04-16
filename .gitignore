@@ -173,7 +173,6 @@ tmp/
 
 .vscode/
 module/.terraform/
-module/.terraform.*
 module/backend.tf
 module/terraform.tfvars.json
 module/plan
