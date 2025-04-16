@@ -56,6 +56,15 @@ class State(StrEnum):
     SOURCE_DB_INSTANCES_DELETED = "source_db_instances_deleted"
     DELETING = "deleting"
     NO_OP = "no_op"
+    PENDING_PREPARE = "pending_prepare"
+
+
+class PendingPrepare(StrEnum):
+    """Pending Prepare Enum"""
+
+    TARGET_PARAMETER_GROUP = "target_parameter_group"
+    DELETION_PROTECTION = "deletion_protection"
+    BACKUP_RETENTION_PERIOD = "backup_retention_period"
 
 
 class ActionType(StrEnum):
