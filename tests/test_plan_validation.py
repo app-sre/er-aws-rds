@@ -196,7 +196,13 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(
     mock_aws_api: Mock,
 ) -> None:
     """Test no changes when Blue/Green Deployment is enabled"""
-    mock_aws_api.return_value.get_engine_default_parameters.return_value = {}
+    mock_aws_api.return_value.get_engine_default_parameters.return_value = {
+        "rds.force_ssl": {
+            "ParameterName": "rds.force_ssl",
+            "ParameterValue": "1",
+            "ApplyType": "static",
+        }
+    }
     plan = Plan.model_validate({
         "resource_changes": [
             change,
@@ -521,8 +527,91 @@ def test_validate_parameter_group_with_immediate_for_static_parameter(
     errors = validator.validate()
 
     assert errors == [
-        "cannot use immediate apply method for static parameter, must be set to pending-reboot: rds.logical_replication"
+        "Cannot use immediate apply method for static parameter, must be set to pending-reboot: rds.logical_replication"
     ]
+
+
+@pytest.mark.parametrize(
+    ("action", "before", "after"),
+    [
+        (
+            "update",
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "pending-reboot",
+                        "name": "rds.logical_replication",
+                        "value": "0",
+                    },
+                ],
+            },
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "pending-reboot",
+                        "name": "typo",
+                        "value": "1",
+                    },
+                ],
+            },
+        ),
+        (
+            "create",
+            None,
+            {
+                "id": "test-rds-pg15",
+                "name": "test-rds-pg15",
+                "family": "postgres15",
+                "parameter": [
+                    {
+                        "apply_method": "pending-reboot",
+                        "name": "typo",
+                        "value": "1",
+                    },
+                ],
+            },
+        ),
+    ],
+)
+def test_validate_parameter_group_with_unknown_parameters(
+    action: str,
+    before: dict[str, Any] | None,
+    after: dict[str, Any],
+    mock_aws_api: Mock,
+) -> None:
+    """Test parameter group update validation for unknown parameters"""
+    mock_aws_api.return_value.get_engine_default_parameters.return_value = {
+        "rds.logical_replication": {
+            "ParameterName": "rds.logical_replication",
+            "ParameterValue": "0",
+            "ApplyType": "static",
+        }
+    }
+    mock_aws_api.return_value.get_db_parameter_group.return_value = None
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_parameter_group",
+                "change": {
+                    "actions": [action],
+                    "before": before,
+                    "after": after,
+                    "after_unknown": {},
+                },
+            },
+        ]
+    })
+    validator = RDSPlanValidator(plan, input_object())
+
+    errors = validator.validate()
+
+    assert errors == ["Unknown parameter detected in parameter group: typo"]
 
 
 def test_validate_parameter_group_deletion() -> None:
