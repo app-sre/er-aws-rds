@@ -227,6 +227,12 @@ class RDSPlanValidator:
             list(after_parameter_by_name.keys()),
         )
 
+        for name, parameter in after_parameter_by_name.items():
+            self._validate_parameter_in_parameter_group(
+                parameter=parameter,
+                default_parameter=default_parameter_by_name.get(name),
+            )
+
         before_parameter_by_name = (
             {
                 parameter["name"]: Parameter.model_validate(parameter)
@@ -245,9 +251,6 @@ class RDSPlanValidator:
 
         self._validate_apply_method_change_only(
             before_parameter_by_name, after_parameter_by_name
-        )
-        self._validate_apply_method_with_apply_type(
-            default_parameter_by_name, after_parameter_by_name
         )
 
     def _validate_apply_method_change_only(
@@ -273,25 +276,24 @@ class RDSPlanValidator:
                 "checkout details at https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
             )
 
-    def _validate_apply_method_with_apply_type(
+    def _validate_parameter_in_parameter_group(
         self,
-        default_parameter_by_name: dict[str, ParameterOutputTypeDef],
-        after_parameter_by_name: dict[str, Parameter],
+        parameter: Parameter,
+        default_parameter: ParameterOutputTypeDef | None,
     ) -> None:
-        common_names = default_parameter_by_name.keys() & after_parameter_by_name.keys()
-        immediate_on_static_parameter_names = [
-            name
-            for name in common_names
-            if (
-                after_parameter_by_name[name].apply_method == "immediate"
-                and default_parameter_by_name[name].get("ApplyType") == "static"
-            )
-        ]
-        if immediate_on_static_parameter_names:
-            parameters = ", ".join(immediate_on_static_parameter_names)
+        if default_parameter is None:
             self.errors.append(
-                "cannot use immediate apply method for static parameter, "
-                f"must be set to pending-reboot: {parameters}"
+                f"Unknown parameter detected in parameter group: {parameter.name}"
+            )
+            return
+
+        if (
+            parameter.apply_method == "immediate"
+            and default_parameter.get("ApplyType") == "static"
+        ):
+            self.errors.append(
+                f"Cannot use immediate apply method for static parameter, "
+                f"must be set to pending-reboot: {parameter.name}"
             )
 
     def _validate_parameter_group_changes(self) -> None:
