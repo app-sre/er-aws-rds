@@ -402,7 +402,7 @@ class Rds(RdsAppInterface):
                 storage_throughput=self.storage_throughput,
                 storage_type=self.storage_type,
                 parameter_group=self.parameter_group,
-            ).model_dump()
+            ).model_dump(exclude_none=True)
             target = self.blue_green_deployment.target.model_dump(exclude_none=True)
             not_matched = {k: v for k, v in target.items() if desired_config[k] != v}
             if not_matched:
