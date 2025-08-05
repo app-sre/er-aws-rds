@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.6.12
+
+* Upgrade to latest Terraform AWS provider version 5.
+
 ## 0.5.0
 
 - HCL version release.
