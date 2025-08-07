@@ -1,6 +1,6 @@
 FROM quay.io/redhat-services-prod/app-sre-tenant/er-base-terraform-main/er-base-terraform-main:0.3.8-12@sha256:175341535622a5063d9dc80bb25f01aa89c9def5eb64ceb76e75d0e956d0ed59 AS base
 # keep in sync with pyproject.toml
-LABEL konflux.additional-tags="0.6.12"
+LABEL konflux.additional-tags="0.7.0"
 
 FROM base AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.8.5@sha256:9ac8566d708f42bae522b050004f75ebc7c344bc726d6d4e70f1d308b18c4471 /uv /bin/uv
