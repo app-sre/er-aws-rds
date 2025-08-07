@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.7.0
+
+* Use Terraform AWS provider version 6.
+
 ## 0.6.12
 
 * Upgrade to latest Terraform AWS provider version 5.
