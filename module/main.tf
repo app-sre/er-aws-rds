@@ -6,9 +6,8 @@ data "aws_db_instance" "replica_source" {
 }
 
 data "aws_kms_key" "this" {
-  count    = try(var.rds_instance.kms_key, null) != null && !startswith(try(var.rds_instance.kms_key, ""), "arn:") ? 1 : 0
-  key_id   = "alias/${var.rds_instance.kms_key_id}"
-  provider = aws.replica_source_provider
+  count  = try(var.rds_instance.kms_key_id, null) != null ? 1 : 0
+  key_id = startswith(try(var.rds_instance.kms_key_id, ""), "arn:") ? var.rds_instance.kms_key_id : "alias/${var.rds_instance.kms_key_id}"
 }
 
 data "aws_sns_topic" "this" {
