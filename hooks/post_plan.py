@@ -152,7 +152,6 @@ class RDSPlanValidator:
 
     def _validate_region_change(self) -> None:
         """Validates that RDS instances don't change regions during updates"""
-
         for db in self.aws_db_instances:
             if not db.change or not db.change.before:
                 continue

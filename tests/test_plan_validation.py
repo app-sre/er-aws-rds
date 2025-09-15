@@ -76,6 +76,7 @@ def test_validate_deletion_protection_not_enabled_on_destroy() -> None:
                         "engine": "postgres",
                         "engine_version": "16.1",
                         "deletion_protection": True,
+                        "region": "us-east-1",
                     },
                     "after": None,
                     "after_unknown": None,
@@ -109,6 +110,7 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
                     "before": {
                         "engine": "postgres",
                         "engine_version": "15.7",
+                        "region": "us-east-1",
                     },
                     "after": {
                         "engine": "postgres",
@@ -152,6 +154,7 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
                             "value": "0",
                         },
                     ],
+                    "region": "us-east-1",
                 },
                 "after": {
                     "id": "test-rds-pg15",
@@ -178,6 +181,7 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
                     "engine": "postgres",
                     "engine_version": "15.7",
                     "allocated_storage": 30,
+                    "region": "us-east-1",
                 },
                 "after": {
                     "id": "test-rds-pg15",
@@ -240,6 +244,7 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(
                     "name": "test-rds",
                     "engine": "postgres",
                     "engine_version": "16.3",
+                    "region": "us-east-1",
                 },
                 "after": {},
                 "after_unknown": {},
@@ -253,6 +258,7 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(
                     "id": "test-rds-pg15",
                     "name": "test-rds-pg15",
                     "family": "postgres15",
+                    "region": "us-east-1",
                 },
                 "after": {},
                 "after_unknown": {},
@@ -299,6 +305,7 @@ def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_de
                         "engine": "postgres",
                         "engine_version": "15.7",
                         "deletion_protection": True,
+                        "region": "us-east-1",
                     },
                     "after": {
                         "id": "test-rds-pg15",
@@ -626,6 +633,7 @@ def test_validate_parameter_group_deletion() -> None:
                         "engine": "postgres",
                         "engine_version": "15.3",
                         "parameter_group_name": "test-rds-pg15",
+                        "region": "us-east-1",
                     },
                     "after": {
                         "engine": "postgres",
@@ -699,4 +707,34 @@ def test_validate_parameter_group_name_already_exists(
 
     assert errors == [
         "Parameter group test-rds-pg15 already exists, use a different name"
+    ]
+
+
+def test_validate_region_change() -> None:
+    """Test region change"""
+    plan = Plan.model_validate({
+        "resource_changes": [
+            {
+                "type": "aws_db_instance",
+                "change": {
+                    "after": None,
+                    "before": {"region": "us-east-1"},
+                    "after_unknown": {},
+                },
+            }
+        ]
+    })
+    validator = RDSPlanValidator(
+        plan,
+        input_object({
+            "data": {
+                "region": "us-east-2",
+            }
+        }),
+    )
+
+    errors = validator.validate()
+
+    assert errors == [
+        "Region change detected for RDS instance. Current region: us-east-1, Desired region: us-east-2. RDS instances cannot change regions in-place."
     ]
