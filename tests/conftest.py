@@ -80,7 +80,6 @@ DEFAULT_DATA = {
             "managed_by_integration": "external_resources",
             "namespace": "external-resources-poc",
         },
-        "default_tags": [{"tags": {"app": "app-sre-infra"}}],
     },
     "provision": {
         "provision_provider": "aws",
