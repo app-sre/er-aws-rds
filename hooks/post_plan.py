@@ -150,6 +150,23 @@ class RDSPlanValidator:
                         "To enable major version upgrade, allow_major_version_upgrade attribute must be set to True"
                     )
 
+    def _validate_region_change(self) -> None:
+        """Validates that RDS instances don't change regions during updates"""
+
+        for db in self.aws_db_instances:
+            if not db.change or not db.change.before:
+                continue
+
+            after_region = self.input.data.region
+            before_region = db.change.before["region"]
+
+            if before_region != after_region:
+                self.errors.append(
+                    f"Region change detected for RDS instance. "
+                    f"Current region: {before_region}, Desired region: {after_region}. "
+                    "RDS instances cannot change regions in-place."
+                )
+
     def _validate_deletion_protection_not_enabled_on_destroy(self) -> None:
         for u in self.aws_db_instance_deletions:
             if not u.change or not u.change.before:
@@ -339,6 +356,7 @@ class RDSPlanValidator:
         self.errors.clear()
         self._validate_version_on_create()
         self._validate_version_upgrade()
+        self._validate_region_change()
         self._validate_deletion_protection_not_enabled_on_destroy()
         self._validate_no_changes_when_blue_green_deployment_enabled()
         self._validate_parameter_group_changes()
