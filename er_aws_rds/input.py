@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from typing import Any, Literal, Self
 
 from external_resources_io.input import AppInterfaceProvision
@@ -139,8 +138,7 @@ class RdsAppInterface(BaseModel):
     output_resource_name: str | None = Field(default=None, exclude=True)
     # output_prefix is not necessary since now each resources has it own state.
     output_prefix: str = Field(exclude=True)
-    tags: dict[str, Any] | None = Field(default=None, exclude=True)
-    default_tags: Sequence[dict[str, Any]] | None = Field(default=None, exclude=True)
+    tags: dict[str, str] = Field(default_factory=dict, exclude=True)
 
 
 class Rds(RdsAppInterface):
