@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from unittest.mock import Mock, patch
 
 import pytest
+from pydantic import ValidationError
 
 from hooks.pre_run import main
 from hooks.utils.models import State
@@ -33,6 +34,13 @@ def mock_blue_green_deployment_manager() -> Iterator[Mock]:
 def mock_is_dry_run() -> Iterator[Mock]:
     """Patch is_dry_run"""
     with patch("hooks.pre_run.is_dry_run") as m:
+        yield m
+
+
+@pytest.fixture
+def mock_logging() -> Iterator[Mock]:
+    """Patch logging"""
+    with patch("hooks.pre_run.logging") as m:
         yield m
 
 
@@ -76,6 +84,7 @@ def test_pre_run_hook(  # noqa: PLR0913
     mock_aws_api: Mock,
     mock_blue_green_deployment_manager: Mock,
     mock_is_dry_run: Mock,
+    mock_logging: Mock,
     *,
     dry_run: bool,
     state: State,
@@ -98,14 +107,16 @@ def test_pre_run_hook(  # noqa: PLR0913
         dry_run=dry_run,
     )
     mock_blue_green_deployment_manager.return_value.run.assert_called_once_with()
+    mock_logging.getLogger.return_value.info.assert_called_once()
 
 
-def test_pre_run_hook_with_pending_prepare(
+def test_pre_run_hook_with_pending_prepare(  # noqa: PLR0913, PLR0917
     mock_read_input_from_file: Mock,
     mock_aws_api: Mock,
     mock_blue_green_deployment_manager: Mock,
     mock_is_dry_run: Mock,
     mock_mark_rerun: Mock,
+    mock_logging: Mock,
 ) -> None:
     """Test pre_hook with pending prepare"""
     mock_read_input_from_file.return_value = input_data()
@@ -127,14 +138,18 @@ def test_pre_run_hook_with_pending_prepare(
     )
     mock_blue_green_deployment_manager.return_value.run.assert_called_once_with()
     mock_mark_rerun.assert_called_once_with()
+    mock_logging.getLogger.return_value.info.assert_called_once_with(
+        "Pending prepare, continue to the next step",
+    )
 
 
 @pytest.mark.parametrize("dry_run", [True, False])
-def test_pre_run_hook_exception(
+def test_pre_run_hook_exception(  # noqa: PLR0913
     mock_read_input_from_file: Mock,
     mock_aws_api: Mock,
     mock_blue_green_deployment_manager: Mock,
     mock_is_dry_run: Mock,
+    mock_logging: Mock,
     *,
     dry_run: bool,
 ) -> None:
@@ -151,3 +166,30 @@ def test_pre_run_hook_exception(
 
     assert e.value.code == 1
     mock_aws_api.assert_called_once_with(region_name=expected_model.data.region)
+    mock_logging.getLogger.return_value.exception.assert_called_once()
+
+
+@pytest.mark.parametrize("dry_run", [True, False])
+def test_pre_run_hook_validation_error(  # noqa: PLR0913
+    mock_read_input_from_file: Mock,
+    mock_aws_api: Mock,
+    mock_blue_green_deployment_manager: Mock,
+    mock_is_dry_run: Mock,
+    mock_logging: Mock,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test pre_hook validation error"""
+    mock_read_input_from_file.return_value = input_data()
+    mock_is_dry_run.return_value = dry_run
+    expected_model = input_object()
+    mock_blue_green_deployment_manager.return_value.run.side_effect = (
+        ValidationError.from_exception_data("validation error", [])
+    )
+
+    with pytest.raises(SystemExit) as e:
+        main()
+
+    assert e.value.code == 1
+    mock_aws_api.assert_called_once_with(region_name=expected_model.data.region)
+    mock_logging.getLogger.return_value.error.assert_called_once()

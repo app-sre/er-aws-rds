@@ -4,6 +4,7 @@ import sys
 
 from external_resources_io.exit_status import EXIT_ERROR, EXIT_OK, EXIT_SKIP
 from external_resources_io.input import parse_model, read_input_from_file
+from pydantic import ValidationError
 
 from er_aws_rds.input import AppInterfaceInput
 from hooks.utils.aws_api import AWSApi
@@ -27,6 +28,9 @@ def main() -> None:
     )
     try:
         state = manager.run()
+    except ValidationError as e:
+        logger.error("Validation Error for Blue/Green Deployment management: %s", e)  # noqa: TRY400
+        sys.exit(EXIT_ERROR)
     except Exception:
         logger.exception("Error during Blue/Green Deployment management")
         sys.exit(EXIT_ERROR)
