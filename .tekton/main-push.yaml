@@ -27,6 +27,9 @@ spec:
     value: .
   - name: target-stage
     value: prod
+  # Enforce that all stages (including tests) are built
+  - name: skip-unused-stages
+    value: false
   pipelineRef:
     resolver: git
     params:

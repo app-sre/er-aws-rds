@@ -29,7 +29,10 @@ spec:
   - name: path-context
     value: .
   - name: target-stage
-    value: test
+    value: prod
+  # Enforce that all stages (including tests) are built
+  - name: skip-unused-stages
+    value: false
   pipelineRef:
     resolver: git
     params:
