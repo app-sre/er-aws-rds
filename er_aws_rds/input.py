@@ -180,6 +180,7 @@ class Rds(RdsAppInterface):
     iops: int | None = None
     storage_throughput: int | None = None
     storage_type: str | None = None
+    copy_tags_to_snapshot: bool | None = True
 
     @property
     def enhanced_monitoring_role_name(self) -> str:

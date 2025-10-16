@@ -372,3 +372,10 @@ def test_validate_blue_green_deployment_when_desired_config_not_match_target_aft
         match=r".*desired config not match blue_green_deployment.target after delete, update: .*",
     ):
         AppInterfaceInput.model_validate(mod_input)
+
+
+def test_copy_tags_to_snapshot_default_true() -> None:
+    """Test copy_tags_to_snapshot default True"""
+    mod_input = input_data()
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert model.data.copy_tags_to_snapshot is True
