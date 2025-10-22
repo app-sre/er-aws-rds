@@ -31,20 +31,41 @@ class AWSApi:
         self.rds_client: RDSClient = self.session.client("rds")
         self.ec2_client: EC2Client = self.session.client("ec2")
 
-    def get_security_group_ids(self) -> set[str]:
+    def get_security_group_ids_for_db_subnet_group(
+        self, db_subnet_group_name: str
+    ) -> set[str]:
         """
-        Get all available VPC security group IDs in the region
+        Get all available security group IDs for a given DB subnet group
 
-        :return: Set of all security group IDs
+        :param db_subnet_group_name: Name of the DB subnet group
+        :return: Set of security group IDs available in the VPC of the DB subnet group
         """
-        paginator = self.ec2_client.get_paginator("describe_security_groups")
-        page_iterator = paginator.paginate()
+        try:
+            # Get the DB subnet group details
+            response = self.rds_client.describe_db_subnet_groups(
+                DBSubnetGroupName=db_subnet_group_name
+            )
+            if not response["DBSubnetGroups"]:
+                return set()
 
-        return {
-            sg["GroupId"]
-            for page in page_iterator
-            for sg in page.get("SecurityGroups", [])
-        }
+            # Get the VPC ID from the first subnet in the group
+            vpc_id = response["DBSubnetGroups"][0].get("VpcId")
+            if not vpc_id:
+                return set()
+
+            # Get all security groups in that VPC
+            paginator = self.ec2_client.get_paginator("describe_security_groups")
+            page_iterator = paginator.paginate(
+                Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
+            )
+
+            return {
+                sg["GroupId"]
+                for page in page_iterator
+                for sg in page.get("SecurityGroups", [])
+            }
+        except self.rds_client.exceptions.DBSubnetGroupNotFoundFault:
+            return set()
 
     def is_rds_engine_version_available(self, engine: str, version: str) -> bool:
         """Checks if the engine version is available"""

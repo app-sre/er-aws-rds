@@ -361,12 +361,17 @@ class RDSPlanValidator:
             for c in self.plan.resource_changes
         ):
             return
-
+        valid_security_group_ids = (
+            self.aws_api.get_security_group_ids_for_db_subnet_group(
+                db_subnet_group_name=self.input.data.db_subnet_group_name or ""
+            )
+        )
         if not self.input.data.vpc_security_group_ids or not set(
             self.input.data.vpc_security_group_ids
-        ).issubset(self.aws_api.get_security_group_ids()):
+        ).issubset(valid_security_group_ids):
             self.errors.append(
                 f"Not all given VPC Security Group IDs {self.input.data.vpc_security_group_ids} exist in the AWS Account. "
+                f"Valid VPC Security Group IDs for the given subnet group name '{self.input.data.db_subnet_group_name}' are {valid_security_group_ids}. "
                 "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
             )
 

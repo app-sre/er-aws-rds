@@ -81,6 +81,7 @@ DEFAULT_DATA = {
             "namespace": "external-resources-poc",
         },
         "vpc_security_group_ids": ["sgA"],
+        "db_subnet_group_name": "db-subnet-group",
     },
     "provision": {
         "provision_provider": "aws",
