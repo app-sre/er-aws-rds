@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Any, Literal, Self
 
 from external_resources_io.input import AppInterfaceProvision
@@ -181,6 +182,7 @@ class Rds(RdsAppInterface):
     storage_throughput: int | None = None
     storage_type: str | None = None
     copy_tags_to_snapshot: bool | None = True
+    vpc_security_group_ids: Sequence[str] = []
 
     @property
     def enhanced_monitoring_role_name(self) -> str:

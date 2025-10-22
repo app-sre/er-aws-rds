@@ -1,13 +1,13 @@
 [project]
 name = "er-aws-rds"
-version = "0.10.0"
+version = "0.11.0"
 description = "ERv2 module for managing AWS rds instances"
 authors = [{ name = "AppSRE", email = "sd-app-sre@redhat.com" }]
 license = { text = "Apache 2.0" }
 readme = "README.md"
 requires-python = "~= 3.12.0"
 dependencies = [
-    "boto3-stubs[rds]==1.40.55",
+    "boto3-stubs[ec2,rds]==1.40.55",
     "boto3==1.40.55",
     "external-resources-io==0.6.2",
     "pydantic==2.12.3",

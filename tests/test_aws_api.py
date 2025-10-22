@@ -44,8 +44,9 @@ def test_init(mock_session: Mock, region_name: str | None) -> None:
 
     assert aws_api.session == mock_session.return_value
     assert aws_api.rds_client == mock_session.return_value.client.return_value
+    assert aws_api.ec2_client == mock_session.return_value.client.return_value
     mock_session.assert_called_once_with(region_name=region_name)
-    mock_session.return_value.client.assert_called_once_with("rds")
+    mock_session.return_value.client.assert_has_calls([call("rds"), call("ec2")])
 
 
 @pytest.fixture

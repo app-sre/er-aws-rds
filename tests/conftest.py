@@ -80,6 +80,7 @@ DEFAULT_DATA = {
             "managed_by_integration": "external_resources",
             "namespace": "external-resources-poc",
         },
+        "vpc_security_group_ids": ["sgA"],
     },
     "provision": {
         "provision_provider": "aws",

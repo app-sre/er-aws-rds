@@ -36,6 +36,8 @@ def new_instance_plan() -> dict[str, Any]:
 def mock_aws_api() -> Iterator[Mock]:
     """Patch AWSApi"""
     with patch("hooks.post_plan.AWSApi", autospec=True) as m:
+        # Make sure Action.Create tests dont fail because of missing sgA.
+        m.return_value.get_security_group_ids.return_value = ["sgA"]
         yield m
 
 
@@ -738,3 +740,59 @@ def test_validate_region_change() -> None:
     assert errors == [
         "Region change detected for RDS instance. Current region: us-east-1, Desired region: us-east-2. RDS instances cannot change regions in-place."
     ]
+
+
+@pytest.mark.parametrize(
+    ("existing_security_groups", "input_security_groups", "expected_errors"),
+    [
+        # Case: Security Group IDs exist
+        (
+            ["sgA", "sgB"],
+            ["sgA"],
+            [],
+        ),
+        # Case: No Security Group ID given
+        (
+            ["sgA", "sgB"],
+            [],
+            [
+                "Not all given VPC Security Group IDs [] exist in the AWS Account. "
+                "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
+            ],
+        ),
+        # Case: Security Group ID does not exist
+        (
+            ["sgA", "sgB"],
+            ["sgC"],
+            [
+                "Not all given VPC Security Group IDs ['sgC'] exist in the AWS Account. "
+                "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
+            ],
+        ),
+    ],
+)
+def test_validate_security_group_ids_exist(
+    existing_security_groups: list[str],
+    input_security_groups: list[str],
+    expected_errors: list[str],
+    mock_aws_api: Mock,
+    new_instance_plan: dict[str, Any],
+) -> None:
+    """Test parameter group name already exists"""
+    mock_aws_api.return_value.get_security_group_ids.return_value = (
+        existing_security_groups
+    )
+
+    plan = Plan.model_validate(new_instance_plan)
+    validator = RDSPlanValidator(
+        plan,
+        input_object({
+            "data": {
+                "vpc_security_group_ids": input_security_groups,
+            }
+        }),
+    )
+
+    errors = validator.validate()
+
+    assert errors == expected_errors

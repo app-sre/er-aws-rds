@@ -350,6 +350,26 @@ class RDSPlanValidator:
                 "If this is the preparation for a blue/green deployment on read replica, then unset parameter_group when source instance has enabled blue_green_deployment."
             )
 
+    def _validate_vpc_security_group_ids(self) -> None:
+        # Check if there are any DB instance creations that need validation
+        # Note, we dont need to check existing DBs so we can save AWS queries
+        if not any(
+            c.type == "aws_db_instance"
+            and c.change
+            and c.change.after
+            and Action.ActionCreate in c.change.actions
+            for c in self.plan.resource_changes
+        ):
+            return
+
+        if not self.input.data.vpc_security_group_ids or not set(
+            self.input.data.vpc_security_group_ids
+        ).issubset(self.aws_api.get_security_group_ids()):
+            self.errors.append(
+                f"Not all given VPC Security Group IDs {self.input.data.vpc_security_group_ids} exist in the AWS Account. "
+                "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
+            )
+
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
         self.errors.clear()
@@ -360,6 +380,7 @@ class RDSPlanValidator:
         self._validate_no_changes_when_blue_green_deployment_enabled()
         self._validate_parameter_group_changes()
         self._validate_parameter_group_deletion()
+        self._validate_vpc_security_group_ids()
         return self.errors
 
 
