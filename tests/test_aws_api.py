@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from mypy_boto3_rds.type_defs import (
         DBInstanceTypeDef,
     )
+from mypy_boto3_ec2 import EC2Client
+from mypy_boto3_ec2.paginator import DescribeSecurityGroupsPaginator
 from mypy_boto3_rds import (
     DescribeDBParametersPaginator,
     DescribeEngineDefaultParametersPaginator,
@@ -56,6 +58,24 @@ def mock_rds_client() -> Iterator[Mock]:
         client = create_autospec(RDSClient)
         m.return_value.client.return_value = client
         yield client
+
+
+@pytest.fixture
+def mock_all_aws_clients() -> Iterator[tuple[Mock, Mock]]:
+    """Patch Session with RDS and EC2 clients"""
+    with patch("hooks.utils.aws_api.Session", autospec=True) as m:
+        rds_client = create_autospec(RDSClient)
+        ec2_client = create_autospec(EC2Client)
+
+        def client_side_effect(service_name: str) -> Mock:
+            if service_name == "rds":
+                return rds_client
+            if service_name == "ec2":
+                return ec2_client
+            return Mock()
+
+        m.return_value.client.side_effect = client_side_effect
+        yield rds_client, ec2_client
 
 
 @pytest.mark.parametrize(
@@ -570,4 +590,63 @@ def test_delete_blue_green_deployment_with_delete_target_none(
 
     mock_rds_client.delete_blue_green_deployment.assert_called_once_with(
         BlueGreenDeploymentIdentifier="identifier",
+    )
+
+
+def test_get_security_group_ids_for_db_subnet_group(
+    mock_all_aws_clients: tuple[Mock, Mock],
+) -> None:
+    """Test get_security_group_ids_for_db_subnet_group"""
+    rds_client = mock_all_aws_clients[0]
+    ec2_client = mock_all_aws_clients[1]
+    rds_client.describe_db_subnet_groups.return_value = {
+        "DBSubnetGroups": [
+            {
+                "DBSubnetGroupName": "test",
+                "VpcId": "vpc-12345",
+                "Subnets": [
+                    {
+                        "SubnetIdentifier": "subnet-11111",
+                        "SubnetAvailabilityZone": {"Name": "us-east-1a"},
+                    },
+                    {
+                        "SubnetIdentifier": "subnet-22222",
+                        "SubnetAvailabilityZone": {"Name": "us-east-1b"},
+                    },
+                ],
+            }
+        ]
+    }
+
+    mock_paginator = create_autospec(DescribeSecurityGroupsPaginator)
+    mock_paginator.paginate.return_value = [
+        {
+            "SecurityGroups": [
+                {
+                    "GroupId": "sg-11111",
+                    "GroupName": "default",
+                    "VpcId": "vpc-12345",
+                },
+                {
+                    "GroupId": "sg-22222",
+                    "GroupName": "app-security-group",
+                    "VpcId": "vpc-12345",
+                },
+            ]
+        }
+    ]
+    ec2_client.get_paginator.return_value = mock_paginator
+
+    aws_api = AWSApi()
+    result = aws_api.get_security_group_ids_for_db_subnet_group(
+        db_subnet_group_name="test"
+    )
+
+    assert result == {"sg-11111", "sg-22222"}
+    rds_client.describe_db_subnet_groups.assert_called_once_with(
+        DBSubnetGroupName="test"
+    )
+    ec2_client.get_paginator.assert_called_once_with("describe_security_groups")
+    mock_paginator.paginate.assert_called_once_with(
+        Filters=[{"Name": "vpc-id", "Values": ["vpc-12345"]}]
     )
