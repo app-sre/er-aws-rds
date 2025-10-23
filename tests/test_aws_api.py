@@ -52,16 +52,7 @@ def test_init(mock_session: Mock, region_name: str | None) -> None:
 
 
 @pytest.fixture
-def mock_rds_client() -> Iterator[Mock]:
-    """Patch Session"""
-    with patch("hooks.utils.aws_api.Session", autospec=True) as m:
-        client = create_autospec(RDSClient)
-        m.return_value.client.return_value = client
-        yield client
-
-
-@pytest.fixture
-def mock_all_aws_clients() -> Iterator[tuple[Mock, Mock]]:
+def mock_all_aws_clients() -> Iterator[dict[str, Mock]]:
     """Patch Session with RDS and EC2 clients"""
     with patch("hooks.utils.aws_api.Session", autospec=True) as m:
         rds_client = create_autospec(RDSClient)
@@ -75,7 +66,10 @@ def mock_all_aws_clients() -> Iterator[tuple[Mock, Mock]]:
             return Mock()
 
         m.return_value.client.side_effect = client_side_effect
-        yield rds_client, ec2_client
+        yield {
+            "rds": rds_client,
+            "ec2": ec2_client,
+        }
 
 
 @pytest.mark.parametrize(
@@ -86,12 +80,13 @@ def mock_all_aws_clients() -> Iterator[tuple[Mock, Mock]]:
     ],
 )
 def test_is_rds_engine_version_available(
-    mock_rds_client: Mock,
+    mock_all_aws_clients: dict[str, Mock],
     versions: list[dict[str, str]],
     *,
     expected: bool,
 ) -> None:
     """Test is_rds_engine_version_available"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     mock_rds_client.describe_db_engine_versions.return_value = {
         "DBEngineVersions": versions,
     }
@@ -103,9 +98,10 @@ def test_is_rds_engine_version_available(
 
 
 def test_get_rds_valid_upgrade_targets(
-    mock_rds_client: Mock,
+    mock_all_aws_clients: dict[str, Mock],
 ) -> None:
     """Test get_rds_valid_upgrade_targets"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     mock_rds_client.describe_db_engine_versions.return_value = {
         "DBEngineVersions": [
             {
@@ -132,9 +128,10 @@ def test_get_rds_valid_upgrade_targets(
 
 
 def test_get_blue_green_deployment_valid_upgrade_targets(
-    mock_rds_client: Mock,
+    mock_all_aws_clients: dict[str, Mock],
 ) -> None:
     """Test get_blue_green_deployment_valid_upgrade_targets"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     expected_result = {
         "15.7": {
             "Engine": "postgres",
@@ -211,8 +208,9 @@ def test_get_blue_green_deployment_valid_upgrade_targets(
     ])
 
 
-def test_get_db_instance(mock_rds_client: Mock) -> None:
+def test_get_db_instance(mock_all_aws_clients: dict[str, Mock]) -> None:
     """Test get_db_instance"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     expected_result: DBInstanceTypeDef = {
         "DBInstanceArn": "arn:aws:rds:us-east-1:xxx",
         "DBInstanceIdentifier": "identifier",
@@ -230,8 +228,9 @@ def test_get_db_instance(mock_rds_client: Mock) -> None:
     )
 
 
-def test_get_db_instance_not_found(mock_rds_client: Mock) -> None:
+def test_get_db_instance_not_found(mock_all_aws_clients: dict[str, Mock]) -> None:
     """Test get_db_instance"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     mock_rds_client.exceptions.DBInstanceNotFoundFault = ClientError
     mock_rds_client.describe_db_instances.side_effect = ClientError(
         error_response={
@@ -248,8 +247,9 @@ def test_get_db_instance_not_found(mock_rds_client: Mock) -> None:
     assert result is None
 
 
-def test_create_blue_green_deployment(mock_rds_client: Mock) -> None:
+def test_create_blue_green_deployment(mock_all_aws_clients: dict[str, Mock]) -> None:
     """Test create_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
 
     params = CreateBlueGreenDeploymentParams(
@@ -265,8 +265,11 @@ def test_create_blue_green_deployment(mock_rds_client: Mock) -> None:
     )
 
 
-def test_create_blue_green_deployment_with_all_params(mock_rds_client: Mock) -> None:
+def test_create_blue_green_deployment_with_all_params(
+    mock_all_aws_clients: dict[str, Mock],
+) -> None:
     """Test create_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
 
     params = CreateBlueGreenDeploymentParams(
@@ -298,8 +301,9 @@ def test_create_blue_green_deployment_with_all_params(mock_rds_client: Mock) -> 
     )
 
 
-def test_get_blue_green_deployment(mock_rds_client: Mock) -> None:
+def test_get_blue_green_deployment(mock_all_aws_clients: dict[str, Mock]) -> None:
     """Test get_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     expected_result = {"BlueGreenDeploymentName": "name"}
     mock_rds_client.describe_blue_green_deployments.return_value = {
         "BlueGreenDeployments": [expected_result]
@@ -319,8 +323,11 @@ def test_get_blue_green_deployment(mock_rds_client: Mock) -> None:
     )
 
 
-def test_get_blue_green_deployment_when_not_found(mock_rds_client: Mock) -> None:
+def test_get_blue_green_deployment_when_not_found(
+    mock_all_aws_clients: dict[str, Mock],
+) -> None:
     """Test get_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     mock_rds_client.describe_blue_green_deployments.return_value = {
         "BlueGreenDeployments": []
     }
@@ -331,8 +338,9 @@ def test_get_blue_green_deployment_when_not_found(mock_rds_client: Mock) -> None
     assert result is None
 
 
-def test_get_db_parameter_group(mock_rds_client: Mock) -> None:
+def test_get_db_parameter_group(mock_all_aws_clients: dict[str, Mock]) -> None:
     """Test get_db_parameter_group"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
     expected_result = {"DBParameterGroupName": "name"}
     mock_rds_client.describe_db_parameter_groups.return_value = {
@@ -347,8 +355,11 @@ def test_get_db_parameter_group(mock_rds_client: Mock) -> None:
     )
 
 
-def test_get_db_parameter_group_when_not_found(mock_rds_client: Mock) -> None:
+def test_get_db_parameter_group_when_not_found(
+    mock_all_aws_clients: dict[str, Mock],
+) -> None:
     """Test get_db_parameter_group"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
     mock_rds_client.describe_db_parameter_groups.return_value = {
         "DBParameterGroups": []
@@ -415,9 +426,10 @@ def test_get_db_parameters(
     parameter_names: list[str] | None,
     expected_parameters: dict[str, ParameterOutputTypeDef],
     expected_kwargs: DescribeDBParametersMessagePaginateTypeDef,
-    mock_rds_client: Mock,
+    mock_all_aws_clients: dict[str, Mock],
 ) -> None:
     """Test get_db_parameters"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
     mock_paginator = create_autospec(DescribeDBParametersPaginator)
     mock_paginator.paginate.return_value = [
@@ -482,9 +494,10 @@ def test_get_engine_default_parameters(
     parameter_names: list[str] | None,
     expected_parameters: dict[str, ParameterOutputTypeDef],
     expected_kwargs: DescribeEngineDefaultParametersMessagePaginateTypeDef,
-    mock_rds_client: Mock,
+    mock_all_aws_clients: dict[str, Mock],
 ) -> None:
     """Test get_engine_default_parameters"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
     mock_paginator = create_autospec(DescribeEngineDefaultParametersPaginator)
     mock_paginator.paginate.return_value = [
@@ -510,8 +523,11 @@ def test_get_engine_default_parameters(
     mock_paginator.paginate.assert_called_once_with(**expected_kwargs)
 
 
-def test_switchover_blue_green_deployment(mock_rds_client: Mock) -> None:
+def test_switchover_blue_green_deployment(
+    mock_all_aws_clients: dict[str, Mock],
+) -> None:
     """Test switchover_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
     mock_rds_client.switchover_blue_green_deployment.return_value = None
 
@@ -522,8 +538,11 @@ def test_switchover_blue_green_deployment(mock_rds_client: Mock) -> None:
     )
 
 
-def test_switchover_blue_green_deployment_with_timeout(mock_rds_client: Mock) -> None:
+def test_switchover_blue_green_deployment_with_timeout(
+    mock_all_aws_clients: dict[str, Mock],
+) -> None:
     """Test switchover_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
     mock_rds_client.switchover_blue_green_deployment.return_value = None
 
@@ -535,8 +554,9 @@ def test_switchover_blue_green_deployment_with_timeout(mock_rds_client: Mock) ->
     )
 
 
-def test_delete_db_instance(mock_rds_client: Mock) -> None:
+def test_delete_db_instance(mock_all_aws_clients: dict[str, Mock]) -> None:
     """Test delete_db_instance"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
 
     aws_api.delete_db_instance("identifier")
@@ -546,8 +566,9 @@ def test_delete_db_instance(mock_rds_client: Mock) -> None:
     )
 
 
-def test_delete_blue_green_deployment(mock_rds_client: Mock) -> None:
+def test_delete_blue_green_deployment(mock_all_aws_clients: dict[str, Mock]) -> None:
     """Test delete_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
 
     aws_api.delete_blue_green_deployment("identifier")
@@ -565,11 +586,12 @@ def test_delete_blue_green_deployment(mock_rds_client: Mock) -> None:
     ],
 )
 def test_delete_blue_green_deployment_with_delete_target(
-    mock_rds_client: Mock,
+    mock_all_aws_clients: dict[str, Mock],
     *,
     delete_target: bool,
 ) -> None:
     """Test delete_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
 
     aws_api.delete_blue_green_deployment("identifier", delete_target=delete_target)
@@ -581,9 +603,10 @@ def test_delete_blue_green_deployment_with_delete_target(
 
 
 def test_delete_blue_green_deployment_with_delete_target_none(
-    mock_rds_client: Mock,
+    mock_all_aws_clients: dict[str, Mock],
 ) -> None:
     """Test delete_blue_green_deployment"""
+    mock_rds_client = mock_all_aws_clients["rds"]
     aws_api = AWSApi()
 
     aws_api.delete_blue_green_deployment("identifier", delete_target=None)
@@ -594,12 +617,12 @@ def test_delete_blue_green_deployment_with_delete_target_none(
 
 
 def test_get_security_group_ids_for_db_subnet_group(
-    mock_all_aws_clients: tuple[Mock, Mock],
+    mock_all_aws_clients: dict[str, Mock],
 ) -> None:
     """Test get_security_group_ids_for_db_subnet_group"""
-    rds_client = mock_all_aws_clients[0]
-    ec2_client = mock_all_aws_clients[1]
-    rds_client.describe_db_subnet_groups.return_value = {
+    mock_rds_client = mock_all_aws_clients["rds"]
+    mock_ec2_client = mock_all_aws_clients["ec2"]
+    mock_rds_client.describe_db_subnet_groups.return_value = {
         "DBSubnetGroups": [
             {
                 "DBSubnetGroupName": "test",
@@ -635,7 +658,7 @@ def test_get_security_group_ids_for_db_subnet_group(
             ]
         }
     ]
-    ec2_client.get_paginator.return_value = mock_paginator
+    mock_ec2_client.get_paginator.return_value = mock_paginator
 
     aws_api = AWSApi()
     result = aws_api.get_security_group_ids_for_db_subnet_group(
@@ -643,10 +666,10 @@ def test_get_security_group_ids_for_db_subnet_group(
     )
 
     assert result == {"sg-11111", "sg-22222"}
-    rds_client.describe_db_subnet_groups.assert_called_once_with(
+    mock_rds_client.describe_db_subnet_groups.assert_called_once_with(
         DBSubnetGroupName="test"
     )
-    ec2_client.get_paginator.assert_called_once_with("describe_security_groups")
+    mock_ec2_client.get_paginator.assert_called_once_with("describe_security_groups")
     mock_paginator.paginate.assert_called_once_with(
         Filters=[{"Name": "vpc-id", "Values": ["vpc-12345"]}]
     )
