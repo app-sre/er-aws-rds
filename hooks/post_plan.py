@@ -351,6 +351,8 @@ class RDSPlanValidator:
             )
 
     def _validate_vpc_security_group_ids(self) -> None:
+        if not self.input.data.vpc_security_group_ids:
+            return
         # Check if there are any DB instance creations that need validation
         # Note, we dont need to check existing DBs so we can save AWS queries
         if not any(
