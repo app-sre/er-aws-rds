@@ -41,31 +41,31 @@ class AWSApi:
         :return: Set of security group IDs available in the VPC of the DB subnet group
         """
         try:
-            # Get the DB subnet group details
             response = self.rds_client.describe_db_subnet_groups(
                 DBSubnetGroupName=db_subnet_group_name
             )
-            if not response["DBSubnetGroups"]:
-                return set()
-
-            # Get the VPC ID from the first subnet in the group
-            vpc_id = response["DBSubnetGroups"][0].get("VpcId")
-            if not vpc_id:
-                return set()
-
-            # Get all security groups in that VPC
-            paginator = self.ec2_client.get_paginator("describe_security_groups")
-            page_iterator = paginator.paginate(
-                Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
-            )
-
-            return {
-                sg["GroupId"]
-                for page in page_iterator
-                for sg in page.get("SecurityGroups", [])
-            }
         except self.rds_client.exceptions.DBSubnetGroupNotFoundFault:
             return set()
+
+        if not response["DBSubnetGroups"]:
+            return set()
+
+        # Get the VPC ID from the first subnet in the group
+        vpc_id = response["DBSubnetGroups"][0].get("VpcId")
+        if not vpc_id:
+            return set()
+
+        # Get all security groups in that VPC
+        paginator = self.ec2_client.get_paginator("describe_security_groups")
+        page_iterator = paginator.paginate(
+            Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
+        )
+
+        return {
+            sg["GroupId"]
+            for page in page_iterator
+            for sg in page.get("SecurityGroups", [])
+        }
 
     def is_rds_engine_version_available(self, engine: str, version: str) -> bool:
         """Checks if the engine version is available"""

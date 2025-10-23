@@ -37,7 +37,7 @@ def mock_aws_api() -> Iterator[Mock]:
     """Patch AWSApi"""
     with patch("hooks.post_plan.AWSApi", autospec=True) as m:
         # Make sure Action.Create tests dont fail because of missing sgA.
-        m.return_value.get_security_group_ids_for_db_subnet_group.return_value = ["sgA"]
+        m.return_value.get_security_group_ids_for_db_subnet_group.return_value = {"sgA"}
         yield m
 
 
@@ -755,18 +755,14 @@ def test_validate_region_change() -> None:
         (
             ["sgA", "sgB"],
             [],
-            [
-                "Not all given VPC Security Group IDs [] exist in the AWS Account. "
-                "Valid VPC Security Group IDs for the given subnet group name 'db-subnet-group' are ['sgA', 'sgB']. "
-                "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
-            ],
+            [],
         ),
         # Case: Security Group ID does not exist
         (
             ["sgA", "sgB"],
             ["sgC"],
             [
-                "Not all given VPC Security Group IDs ['sgC'] exist in the AWS Account. "
+                "The following VPC Security Group IDs do not exist in the AWS Account: ['sgC']. "
                 "Valid VPC Security Group IDs for the given subnet group name 'db-subnet-group' are ['sgA', 'sgB']. "
                 "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
             ],
@@ -781,7 +777,9 @@ def test_validate_security_group_ids_exist(
     new_instance_plan: dict[str, Any],
 ) -> None:
     """Test parameter group name already exists"""
-    mock_aws_api.return_value.get_security_group_ids_for_db_subnet_group.return_value = existing_security_groups
+    mock_aws_api.return_value.get_security_group_ids_for_db_subnet_group.return_value = set(
+        existing_security_groups
+    )
 
     plan = Plan.model_validate(new_instance_plan)
     validator = RDSPlanValidator(

@@ -366,12 +366,14 @@ class RDSPlanValidator:
                 db_subnet_group_name=self.input.data.db_subnet_group_name or ""
             )
         )
-        if not self.input.data.vpc_security_group_ids or not set(
-            self.input.data.vpc_security_group_ids
-        ).issubset(valid_security_group_ids):
+        if (
+            invalid_security_group_ids := set(self.input.data.vpc_security_group_ids)
+            - valid_security_group_ids
+        ):
+            # We convert to sorted list for consistent test output. Overhead is neglegible here.
             self.errors.append(
-                f"Not all given VPC Security Group IDs {self.input.data.vpc_security_group_ids} exist in the AWS Account. "
-                f"Valid VPC Security Group IDs for the given subnet group name '{self.input.data.db_subnet_group_name}' are {valid_security_group_ids}. "
+                f"The following VPC Security Group IDs do not exist in the AWS Account: {sorted(invalid_security_group_ids)}. "
+                f"Valid VPC Security Group IDs for the given subnet group name '{self.input.data.db_subnet_group_name}' are {sorted(valid_security_group_ids)}. "
                 "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
             )
 
