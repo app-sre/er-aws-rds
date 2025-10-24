@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from boto3 import Session
 
 if TYPE_CHECKING:
+    from mypy_boto3_ec2 import EC2Client
     from mypy_boto3_rds import RDSClient
     from mypy_boto3_rds.type_defs import (
         DeleteBlueGreenDeploymentRequestTypeDef,
@@ -28,6 +29,43 @@ class AWSApi:
     def __init__(self, region_name: str | None = None) -> None:
         self.session = Session(region_name=region_name)
         self.rds_client: RDSClient = self.session.client("rds")
+        self.ec2_client: EC2Client = self.session.client("ec2")
+
+    def get_security_group_ids_for_db_subnet_group(
+        self, db_subnet_group_name: str
+    ) -> set[str]:
+        """
+        Get all available security group IDs for a given DB subnet group
+
+        :param db_subnet_group_name: Name of the DB subnet group
+        :return: Set of security group IDs available in the VPC of the DB subnet group
+        """
+        try:
+            response = self.rds_client.describe_db_subnet_groups(
+                DBSubnetGroupName=db_subnet_group_name
+            )
+        except self.rds_client.exceptions.DBSubnetGroupNotFoundFault:
+            return set()
+
+        if not response["DBSubnetGroups"]:
+            return set()
+
+        # Get the VPC ID from the first subnet in the group
+        vpc_id = response["DBSubnetGroups"][0].get("VpcId")
+        if not vpc_id:
+            return set()
+
+        # Get all security groups in that VPC
+        paginator = self.ec2_client.get_paginator("describe_security_groups")
+        page_iterator = paginator.paginate(
+            Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
+        )
+
+        return {
+            sg["GroupId"]
+            for page in page_iterator
+            for sg in page.get("SecurityGroups", [])
+        }
 
     def is_rds_engine_version_available(self, engine: str, version: str) -> bool:
         """Checks if the engine version is available"""

@@ -350,6 +350,35 @@ class RDSPlanValidator:
                 "If this is the preparation for a blue/green deployment on read replica, then unset parameter_group when source instance has enabled blue_green_deployment."
             )
 
+    def _validate_vpc_security_group_ids(self) -> None:
+        if not self.input.data.vpc_security_group_ids:
+            return
+        # Check if there are any DB instance creations that need validation
+        # Note, we dont need to check existing DBs so we can save AWS queries
+        if not any(
+            c.type == "aws_db_instance"
+            and c.change
+            and c.change.after
+            and Action.ActionCreate in c.change.actions
+            for c in self.plan.resource_changes
+        ):
+            return
+        valid_security_group_ids = (
+            self.aws_api.get_security_group_ids_for_db_subnet_group(
+                db_subnet_group_name=self.input.data.db_subnet_group_name or ""
+            )
+        )
+        if (
+            invalid_security_group_ids := set(self.input.data.vpc_security_group_ids)
+            - valid_security_group_ids
+        ):
+            # We convert to sorted list for consistent test output. Overhead is neglegible here.
+            self.errors.append(
+                f"The following VPC Security Group IDs do not exist in the AWS Account: {sorted(invalid_security_group_ids)}. "
+                f"Valid VPC Security Group IDs for the given subnet group name '{self.input.data.db_subnet_group_name}' are {sorted(valid_security_group_ids)}. "
+                "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
+            )
+
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
         self.errors.clear()
@@ -360,6 +389,7 @@ class RDSPlanValidator:
         self._validate_no_changes_when_blue_green_deployment_enabled()
         self._validate_parameter_group_changes()
         self._validate_parameter_group_deletion()
+        self._validate_vpc_security_group_ids()
         return self.errors
 
 
