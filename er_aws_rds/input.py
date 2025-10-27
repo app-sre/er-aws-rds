@@ -182,7 +182,7 @@ class Rds(RdsAppInterface):
     storage_throughput: int | None = None
     storage_type: str | None = None
     copy_tags_to_snapshot: bool | None = True
-    vpc_security_group_ids: Sequence[str] = []
+    vpc_security_group_ids: Sequence[str] | None = None
 
     @property
     def enhanced_monitoring_role_name(self) -> str:
