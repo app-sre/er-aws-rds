@@ -448,10 +448,12 @@ def test_validate_parameter_group_with_apply_method_only_change(
     errors = validator.validate()
 
     assert errors == [
-        "Problematic plan changes for parameter group detected for parameters: rds.force_ssl. "
-        "Parameter with only apply_method toggled while value is same as before or default is not allowed, "
-        "remove the parameter OR change value OR align apply_method with AWS default pending-reboot, "
-        "checkout details at https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+        (
+            "Problematic plan changes for parameter group detected for parameters: rds.force_ssl. "
+            "Parameter with only apply_method toggled while value is same as before or default is not allowed, "
+            "remove the parameter OR change value OR align apply_method with AWS default pending-reboot, "
+            "checkout details at https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_parameter_group#problematic-plan-changes"
+        )
     ]
 
 
@@ -672,8 +674,10 @@ def test_validate_parameter_group_deletion() -> None:
     errors = validator.validate()
 
     assert errors == [
-        "Cannot delete parameter group test-rds-pg15 via unset parameter_group, specify a different parameter group. "
-        "If this is the preparation for a blue/green deployment on read replica, then unset parameter_group when source instance has enabled blue_green_deployment."
+        (
+            "Cannot delete parameter group test-rds-pg15 via unset parameter_group, specify a different parameter group. "
+            "If this is the preparation for a blue/green deployment on read replica, then unset parameter_group when source instance has enabled blue_green_deployment."
+        )
     ]
 
 
@@ -762,9 +766,11 @@ def test_validate_region_change() -> None:
             ["sgA", "sgB"],
             ["sgC"],
             [
-                "The following VPC Security Group IDs do not exist in the AWS Account: ['sgC']. "
-                "Valid VPC Security Group IDs for the given subnet group name 'db-subnet-group' are ['sgA', 'sgB']. "
-                "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
+                (
+                    "The following VPC Security Group IDs do not exist in the AWS Account: ['sgC']. "
+                    "Valid VPC Security Group IDs for the given subnet group name 'db-subnet-group' are ['sgA', 'sgB']. "
+                    "Try querying app-interface for other RDS instances for that AWS account and compare their VPC Security Group ID."
+                )
             ],
         ),
     ],
