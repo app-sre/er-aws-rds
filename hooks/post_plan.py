@@ -351,7 +351,10 @@ class RDSPlanValidator:
             )
 
     def _validate_vpc_security_group_ids(self) -> None:
-        if not self.input.data.vpc_security_group_ids:
+        if (
+            not self.input.data.vpc_security_group_ids
+            or not self.input.data.db_subnet_group_name
+        ):
             return
         # Check if there are any DB instance creations that need validation
         # Note, we dont need to check existing DBs so we can save AWS queries
@@ -365,7 +368,7 @@ class RDSPlanValidator:
             return
         valid_security_group_ids = (
             self.aws_api.get_security_group_ids_for_db_subnet_group(
-                db_subnet_group_name=self.input.data.db_subnet_group_name or ""
+                db_subnet_group_name=self.input.data.db_subnet_group_name
             )
         )
         if (

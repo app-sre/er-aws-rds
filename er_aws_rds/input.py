@@ -236,30 +236,45 @@ class Rds(RdsAppInterface):
 
     @model_validator(mode="after")
     def replication(self) -> Self:
-        """replica_source and replicate_source_db are mutually excluive"""
+        """
+        Validation and transformation for read replicas.
+
+        replica_source and replicate_source_db are mutually exclusive.
+
+        https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#replicate_source_db-1
+        If replicating an Amazon RDS Database Instance in the same region, use the identifier of the source DB, unless also specifying the db_subnet_group_name.
+        If specifying the db_subnet_group_name in the same region, use the arn of the source DB.
+        If replicating an Instance in a different region, use the arn of the source DB.
+        Note that if you are creating a cross-region replica of an encrypted database you will also need to specify a kms_key_id.
+
+        The ARN is resolved in the module using a Datasource.
+
+        https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#db_subnet_group_name-1
+        When working with read replicas created in the same region, defaults to the Subnet Group Name of the source DB.
+        When working with read replicas created in a different region, defaults to the default Subnet Group.
+
+        backup_retention_period must be 0 for replicas.
+        """
         if not self.replica_source:
             return self
 
         if self.replicate_source_db:
-            msg = "Only one of replicate_source_db or replica_source can be defined"
-            raise ValueError(msg)
-        if self.replica_source.region != self.region:
-            # Cross-region replication or different db_subnet_group_name.
-            # The ARN must be set in the replicate_source_db attribute for these cases.
-            # The ARN is resolved in the module using a Datasource.
-            # The Datasource required attributes are fed with the replica_source variable.
-            if not self.db_subnet_group_name:
-                msg = "db_subnet_group_name must be defined for cross-region replicas"
-                raise ValueError(msg)
-            if self.storage_encrypted and not self.kms_key_id:
-                msg = "storage_encrypted ignored for cross-region read replica. Set kms_key_id"
-                raise ValueError(msg)
-        else:
-            # Same-region replication. The instance identifier must be supplied int the replicate_source_db attr.
-            self.replicate_source_db = self.replica_source.identifier
-            self.db_subnet_group_name = None
+            raise ValueError(
+                "Only one of replicate_source_db or replica_source can be defined"
+            )
 
-        # No backup for replicas
+        if self.replica_source.region != self.region:
+            if not self.db_subnet_group_name:
+                raise ValueError(
+                    "db_subnet_group_name must be defined for cross-region replicas"
+                )
+            if self.storage_encrypted and not self.kms_key_id:
+                raise ValueError(
+                    "storage_encrypted ignored for cross-region read replica. Set kms_key_id"
+                )
+        elif not self.db_subnet_group_name:
+            self.replicate_source_db = self.replica_source.identifier
+
         self.backup_retention_period = 0
         return self
 

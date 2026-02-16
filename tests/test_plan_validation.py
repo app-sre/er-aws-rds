@@ -800,3 +800,25 @@ def test_validate_security_group_ids_exist(
     errors = validator.validate()
 
     assert errors == expected_errors
+
+
+def test_validate_security_group_ids_skipped_when_no_db_subnet_group_name(
+    mock_aws_api: Mock,
+    new_instance_plan: dict[str, Any],
+) -> None:
+    """Test that VPC security group validation is skipped when db_subnet_group_name is None"""
+    plan = Plan.model_validate(new_instance_plan)
+    validator = RDSPlanValidator(
+        plan,
+        input_object({
+            "data": {
+                "vpc_security_group_ids": ["sgA"],
+                "db_subnet_group_name": None,
+            }
+        }),
+    )
+
+    errors = validator.validate()
+
+    assert errors == []
+    mock_aws_api.return_value.get_security_group_ids_for_db_subnet_group.assert_not_called()
