@@ -379,3 +379,37 @@ def test_copy_tags_to_snapshot_default_true() -> None:
     mod_input = input_data()
     model = AppInterfaceInput.model_validate(mod_input)
     assert model.data.copy_tags_to_snapshot is True
+
+
+def test_same_region_replica_without_db_subnet_group_name() -> None:
+    """Test same-region replica sets replicate_source_db to source identifier when db_subnet_group_name is not specified"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+            },
+            "db_subnet_group_name": None,
+        }
+    })
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert model.data.replicate_source_db == "test-rds-source"
+    assert model.data.db_subnet_group_name is None
+    assert model.data.backup_retention_period == 0
+
+
+def test_same_region_replica_with_db_subnet_group_name() -> None:
+    """Test same-region replica does not set replicate_source_db when db_subnet_group_name is specified"""
+    mod_input = input_data({
+        "data": {
+            "replica_source": {
+                "identifier": "test-rds-source",
+                "region": "us-east-1",
+            },
+            "db_subnet_group_name": "custom-subnet-group",
+        }
+    })
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert model.data.replicate_source_db is None
+    assert model.data.db_subnet_group_name == "custom-subnet-group"
+    assert model.data.backup_retention_period == 0
