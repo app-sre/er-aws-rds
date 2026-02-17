@@ -3,7 +3,7 @@ FROM quay.io/redhat-services-prod/app-sre-tenant/er-base-terraform-main/er-base-
 LABEL konflux.additional-tags="0.12.0"
 
 FROM base AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.9.25@sha256:13e233d08517abdafac4ead26c16d881cd77504a2c40c38c905cf3a0d70131a6 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.10.3@sha256:7a88d4c4e6f44200575000638453a5a381db0ae31ad5c3a51b14f8687c9d93a3 /uv /bin/uv
 
 # Python and UV related variables
 ENV \
