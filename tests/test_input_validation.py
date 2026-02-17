@@ -413,3 +413,32 @@ def test_same_region_replica_with_db_subnet_group_name() -> None:
     assert model.data.replicate_source_db is None
     assert model.data.db_subnet_group_name == "custom-subnet-group"
     assert model.data.backup_retention_period == 0
+
+
+@pytest.mark.parametrize(
+    "replica_input",
+    [
+        {
+            "replica_source": {"identifier": "test-rds-source", "region": "us-east-1"},
+        },
+        {
+            "replicate_source_db": "arn:aws:rds:us-east-1:123456789012:db:test-rds-source",
+        },
+    ],
+)
+def test_validate_major_version_upgrade_for_postgres_replica(
+    replica_input: dict,
+) -> None:
+    """Test that allow_major_version_upgrade raises error for postgres read replica"""
+    mod_input = input_data({
+        "data": {
+            **replica_input,
+            "allow_major_version_upgrade": True,
+        }
+    })
+    with pytest.raises(ValidationError) as exc:
+        AppInterfaceInput.model_validate(mod_input)
+    assert (
+        "allow_major_version_upgrade is not supported for postgres read replica instances"
+        in str(exc.value)
+    )
