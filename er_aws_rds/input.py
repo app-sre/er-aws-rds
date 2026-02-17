@@ -279,6 +279,23 @@ class Rds(RdsAppInterface):
         return self
 
     @model_validator(mode="after")
+    def _validate_major_version_upgrade_for_replica(self) -> Self:
+        """
+        Major Version Upgrade not supported for Postgres Read Replica DB Instances
+
+        doc: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.PostgreSQL.html
+        """
+        if (
+            self.is_read_replica
+            and self.engine == "postgres"
+            and self.allow_major_version_upgrade
+        ):
+            raise ValueError(
+                "allow_major_version_upgrade is not supported for postgres read replica instances"
+            )
+        return self
+
+    @model_validator(mode="after")
     def parameter_groups(self) -> Self:
         """
         Sets the right parameter group names. The instance identifier is used as prefix on each pg.
