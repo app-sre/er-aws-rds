@@ -253,7 +253,8 @@ class Rds(RdsAppInterface):
         When working with read replicas created in the same region, defaults to the Subnet Group Name of the source DB.
         When working with read replicas created in a different region, defaults to the default Subnet Group.
 
-        backup_retention_period must be 0 for replicas.
+        backup_retention_period is left unmanaged (None) for replicas to avoid
+        conflicting with AWS Backup when it controls the retention period.
         """
         if not self.replica_source:
             return self
@@ -275,7 +276,7 @@ class Rds(RdsAppInterface):
         elif not self.db_subnet_group_name:
             self.replicate_source_db = self.replica_source.identifier
 
-        self.backup_retention_period = 0
+        self.backup_retention_period = None
         return self
 
     @model_validator(mode="after")

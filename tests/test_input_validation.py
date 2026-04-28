@@ -395,7 +395,7 @@ def test_same_region_replica_without_db_subnet_group_name() -> None:
     model = AppInterfaceInput.model_validate(mod_input)
     assert model.data.replicate_source_db == "test-rds-source"
     assert model.data.db_subnet_group_name is None
-    assert model.data.backup_retention_period == 0
+    assert model.data.backup_retention_period is None
 
 
 def test_same_region_replica_with_db_subnet_group_name() -> None:
@@ -412,7 +412,7 @@ def test_same_region_replica_with_db_subnet_group_name() -> None:
     model = AppInterfaceInput.model_validate(mod_input)
     assert model.data.replicate_source_db is None
     assert model.data.db_subnet_group_name == "custom-subnet-group"
-    assert model.data.backup_retention_period == 0
+    assert model.data.backup_retention_period is None
 
 
 @pytest.mark.parametrize(
