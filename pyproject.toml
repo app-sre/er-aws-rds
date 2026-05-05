@@ -1,6 +1,6 @@
 [project]
 name = "er-aws-rds"
-version = "0.12.2"
+version = "0.12.3"
 description = "ERv2 module for managing AWS rds instances"
 authors = [{ name = "AppSRE", email = "sd-app-sre@redhat.com" }]
 license = { text = "Apache 2.0" }
@@ -9,7 +9,7 @@ requires-python = "~= 3.12.0"
 dependencies = [
     "boto3-stubs[ec2,rds]==1.43.2",
     "boto3==1.43.2",
-    "external-resources-io==0.6.3",
+    "external-resources-io==0.6.4",
     "pydantic==2.13.3",
     "semver==3.0.4",
 ]
@@ -22,6 +22,7 @@ documentation = "https://github.com/app-sre/er-aws-rds"
 [dependency-groups]
 dev = [
     # Development dependencies
+    "external-resources-io[cli]==0.6.4",
     "mypy==1.20.2",
     "pytest-cov==7.1.0",
     "pytest==9.0.3",
