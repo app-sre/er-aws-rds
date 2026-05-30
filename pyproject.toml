@@ -23,7 +23,7 @@ documentation = "https://github.com/app-sre/er-aws-rds"
 dev = [
     # Development dependencies
     "external-resources-io[cli]==0.6.4",
-    "mypy==1.20.2",
+    "mypy==2.1.0",
     "pytest-cov==7.1.0",
     "pytest==9.0.3",
     "ruff==0.15.12",
