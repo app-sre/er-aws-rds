@@ -121,6 +121,7 @@ class RdsAppInterface(BaseModel):
     aws_partition: str | None = Field(default="aws", exclude=True)
     region: str = Field(exclude=True)
     parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
+    old_parameter_group: ParameterGroup | None = Field(default=None, exclude=True)
     blue_green_deployment: BlueGreenDeployment | None = Field(
         default=None, exclude=True
     )
@@ -308,6 +309,11 @@ class Rds(RdsAppInterface):
             self.parameter_group.name = name
             self.parameter_group_name = name
 
+        if self.old_parameter_group:
+            self.old_parameter_group.name = (
+                f"{self.identifier}-{self.old_parameter_group.name or 'pg'}"
+            )
+
         if (
             self.blue_green_deployment
             and self.blue_green_deployment.target
@@ -480,6 +486,8 @@ class TerraformModuleData(BaseModel):
             and (pg != parameter_group)
         ):
             parameter_groups.append(pg)
+        if self.ai_input.data.old_parameter_group:
+            parameter_groups.append(self.ai_input.data.old_parameter_group)
         return parameter_groups
 
     @computed_field

@@ -37,6 +37,38 @@ def test_parameter_group_name_without_pg_name() -> None:
     assert model.data.parameter_group.name == f"{model.data.identifier}-pg"
 
 
+def test_old_parameter_group_name() -> None:
+    """Test correct old parameter group name is set"""
+    mod_input = input_data({
+        "data": {
+            "old_parameter_group": {
+                "name": "old-pg",
+                "family": "postgres13",
+                "description": "Parameter Group for PostgreSQL 13",
+                "parameters": [],
+            }
+        }
+    })
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert model.data.old_parameter_group is not None
+    assert model.data.old_parameter_group.name == f"{model.data.identifier}-old-pg"
+
+
+def test_old_parameter_group_name_without_pg_name() -> None:
+    """Test old parameter group name defaults to identifier-pg"""
+    mod_input = input_data({
+        "data": {
+            "old_parameter_group": {
+                "name": None,
+                "family": "postgres13",
+            }
+        }
+    })
+    model = AppInterfaceInput.model_validate(mod_input)
+    assert model.data.old_parameter_group is not None
+    assert model.data.old_parameter_group.name == f"{model.data.identifier}-pg"
+
+
 def test_blue_green_deployment_parameter_group_default_name() -> None:
     """Test Blue/Green Deployment parameter group default name"""
     mod_input = input_data({

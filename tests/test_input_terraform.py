@@ -70,3 +70,29 @@ def test_parameter_groups_when_blue_green_deployment_has_duplicate() -> None:
     tf_model = TerraformModuleData(ai_input=model).model_dump()
 
     assert tf_model["parameter_groups"] == [EXPECTED_DEFAULT_PARAMETER_GROUP]
+
+
+OLD_PARAMETER_GROUP = {
+    "name": "old-pg",
+    "family": "postgres13",
+    "description": "Parameter Group for PostgreSQL 13",
+    "parameters": [],
+}
+EXPECTED_OLD_PARAMETER_GROUP = OLD_PARAMETER_GROUP | {
+    "name": "test-rds-old-pg",
+}
+
+
+def test_parameter_groups_with_old_parameter_group() -> None:
+    """Test old_parameter_group is included in parameter_groups"""
+    model = input_object({
+        "data": {
+            "old_parameter_group": OLD_PARAMETER_GROUP,
+        }
+    })
+    tf_model = TerraformModuleData(ai_input=model).model_dump()
+
+    assert tf_model["parameter_groups"] == [
+        EXPECTED_DEFAULT_PARAMETER_GROUP,
+        EXPECTED_OLD_PARAMETER_GROUP,
+    ]
