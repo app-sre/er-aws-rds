@@ -1,4 +1,3 @@
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, call, create_autospec, patch
 
@@ -9,8 +8,13 @@ from hooks.utils.aws_api import AWSApi
 from hooks.utils.models import CreateBlueGreenDeploymentParams
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from mypy_boto3_rds.type_defs import (
         DBInstanceTypeDef,
+        DescribeDBParametersMessagePaginateTypeDef,
+        DescribeEngineDefaultParametersMessagePaginateTypeDef,
+        ParameterOutputTypeDef,
     )
 from mypy_boto3_ec2 import EC2Client
 from mypy_boto3_ec2.paginator import DescribeSecurityGroupsPaginator
@@ -18,11 +22,6 @@ from mypy_boto3_rds import (
     DescribeDBParametersPaginator,
     DescribeEngineDefaultParametersPaginator,
     RDSClient,
-)
-from mypy_boto3_rds.type_defs import (
-    DescribeDBParametersMessagePaginateTypeDef,
-    DescribeEngineDefaultParametersMessagePaginateTypeDef,
-    ParameterOutputTypeDef,
 )
 
 

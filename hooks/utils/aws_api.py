@@ -6,21 +6,19 @@ if TYPE_CHECKING:
     from mypy_boto3_ec2 import EC2Client
     from mypy_boto3_rds import RDSClient
     from mypy_boto3_rds.type_defs import (
+        BlueGreenDeploymentTypeDef,
+        DBInstanceTypeDef,
+        DBParameterGroupTypeDef,
         DeleteBlueGreenDeploymentRequestTypeDef,
+        DescribeDBParametersMessagePaginateTypeDef,
+        DescribeEngineDefaultParametersMessagePaginateTypeDef,
         FilterTypeDef,
+        ParameterOutputTypeDef,
         SwitchoverBlueGreenDeploymentRequestTypeDef,
+        UpgradeTargetTypeDef,
     )
-from mypy_boto3_rds.type_defs import (
-    BlueGreenDeploymentTypeDef,
-    DBInstanceTypeDef,
-    DBParameterGroupTypeDef,
-    DescribeDBParametersMessagePaginateTypeDef,
-    DescribeEngineDefaultParametersMessagePaginateTypeDef,
-    ParameterOutputTypeDef,
-    UpgradeTargetTypeDef,
-)
 
-from hooks.utils.models import CreateBlueGreenDeploymentParams
+    from hooks.utils.models import CreateBlueGreenDeploymentParams
 
 
 class AWSApi:

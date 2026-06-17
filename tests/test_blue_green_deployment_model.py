@@ -1,5 +1,6 @@
+from typing import TYPE_CHECKING
+
 import pytest
-from mypy_boto3_rds.type_defs import ParameterOutputTypeDef
 from pydantic import ValidationError
 
 from er_aws_rds.input import (
@@ -15,6 +16,9 @@ from tests.conftest import (
     DEFAULT_SOURCE_DB_PARAMETERS,
     DEFAULT_VALID_UPGRADE_TARGETS,
 )
+
+if TYPE_CHECKING:
+    from mypy_boto3_rds.type_defs import ParameterOutputTypeDef
 
 
 def build_blue_green_deployment_input_data(

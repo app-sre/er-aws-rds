@@ -1,6 +1,9 @@
 import time
-from collections.abc import Callable
-from logging import Logger
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from logging import Logger
 
 
 def wait_for(

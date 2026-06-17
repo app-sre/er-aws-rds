@@ -1,4 +1,7 @@
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 from logging import Logger
 from unittest.mock import MagicMock, Mock, call, create_autospec, patch
 

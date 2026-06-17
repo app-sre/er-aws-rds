@@ -1,8 +1,11 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from hooks.utils.runtime import mark_rerun, should_rerun
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_mark_rerun(

@@ -1,11 +1,11 @@
 [project]
 name = "er-aws-rds"
-version = "0.12.3"
+version = "0.13.0"
 description = "ERv2 module for managing AWS rds instances"
 authors = [{ name = "AppSRE", email = "sd-app-sre@redhat.com" }]
 license = { text = "Apache 2.0" }
 readme = "README.md"
-requires-python = "~= 3.12.0"
+requires-python = "~= 3.14.0"
 dependencies = [
     "boto3-stubs[ec2,rds]==1.43.6",
     "boto3==1.43.6",
@@ -39,7 +39,6 @@ build-backend = "hatchling.build"
 # Ruff configuration
 [tool.ruff]
 line-length = 88
-target-version = 'py311'
 fix = true
 
 [tool.ruff.lint]
@@ -86,6 +85,13 @@ preview = true
 
 [tool.ruff.lint.isort]
 known-first-party = ["er_aws_rds"]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = [
+    "pydantic.validate_call",
+    "dataclasses.dataclass",
+]
 
 # Mypy configuration
 [tool.mypy]
