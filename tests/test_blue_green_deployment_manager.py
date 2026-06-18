@@ -1,16 +1,20 @@
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from mypy_boto3_rds.type_defs import (
+        BlueGreenDeploymentTypeDef,
+        DBInstanceTypeDef,
+        DBParameterGroupTypeDef,
+        ParameterOutputTypeDef,
+        SwitchoverDetailTypeDef,
+        UpgradeTargetTypeDef,
+    )
 from logging import Logger
 from unittest.mock import Mock, call, create_autospec, patch
 
 import pytest
-from mypy_boto3_rds.type_defs import (
-    BlueGreenDeploymentTypeDef,
-    DBInstanceTypeDef,
-    DBParameterGroupTypeDef,
-    ParameterOutputTypeDef,
-    SwitchoverDetailTypeDef,
-    UpgradeTargetTypeDef,
-)
 from pydantic import ValidationError
 
 from hooks.utils.aws_api import AWSApi

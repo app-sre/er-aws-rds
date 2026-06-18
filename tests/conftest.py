@@ -1,13 +1,14 @@
-from typing import Any
-
-from mypy_boto3_rds.type_defs import (
-    DBInstanceTypeDef,
-    DBParameterGroupTypeDef,
-    ParameterOutputTypeDef,
-    UpgradeTargetTypeDef,
-)
+from typing import TYPE_CHECKING, Any
 
 from er_aws_rds.input import AppInterfaceInput
+
+if TYPE_CHECKING:
+    from mypy_boto3_rds.type_defs import (
+        DBInstanceTypeDef,
+        DBParameterGroupTypeDef,
+        ParameterOutputTypeDef,
+        UpgradeTargetTypeDef,
+    )
 
 
 def deep_merge(dict1: dict[str, Any], dict2: dict[str, Any]) -> dict[str, Any]:

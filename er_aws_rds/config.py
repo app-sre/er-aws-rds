@@ -26,5 +26,5 @@ def generate_tf_files() -> None:
     create_tf_vars_json(tf)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     generate_tf_files()

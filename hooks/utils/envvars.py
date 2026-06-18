@@ -1,8 +1,11 @@
 import logging
 import os
 import sys
-from collections.abc import Iterable
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +22,11 @@ class RuntimeEnvVars(Enum):
         return self.value in os.environ
 
     @classmethod
-    def missing(cls, vars_: Iterable["RuntimeEnvVars"]) -> list[str]:
+    def missing(cls, vars_: Iterable[RuntimeEnvVars]) -> list[str]:
         return [var.value for var in vars_ if not var.is_set()]
 
     @classmethod
-    def check(cls, required_vars: Iterable["RuntimeEnvVars"]) -> None:
+    def check(cls, required_vars: Iterable[RuntimeEnvVars]) -> None:
         """Checks if required environment variables are set, logs an error, and exits if any are missing."""
         missing_vars = cls.missing(required_vars)
         if missing_vars:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import logging
 import sys
-from collections.abc import Iterable, Iterator
+from typing import TYPE_CHECKING
 
 from external_resources_io.input import parse_model, read_input_from_file
 from external_resources_io.terraform import (
@@ -11,7 +11,6 @@ from external_resources_io.terraform import (
     ResourceChange,
     TerraformJsonPlanParser,
 )
-from mypy_boto3_rds.type_defs import ParameterOutputTypeDef
 
 from er_aws_rds.input import (
     AppInterfaceInput,
@@ -20,6 +19,11 @@ from er_aws_rds.input import (
 from hooks.utils.aws_api import AWSApi
 from hooks.utils.envvars import RuntimeEnvVars
 from hooks.utils.logger import setup_logging
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from mypy_boto3_rds.type_defs import ParameterOutputTypeDef
 
 
 class RDSPlanValidator:
@@ -396,7 +400,7 @@ class RDSPlanValidator:
         return self.errors
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     setup_logging()
     logger = logging.getLogger(__name__)
 

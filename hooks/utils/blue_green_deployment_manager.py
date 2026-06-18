@@ -1,19 +1,7 @@
 import logging
-from collections.abc import Callable
 from functools import cached_property
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-from mypy_boto3_rds.type_defs import (
-    BlueGreenDeploymentTypeDef,
-    DBInstanceTypeDef,
-    ParameterOutputTypeDef,
-)
-
-from er_aws_rds.input import (
-    AppInterfaceInput,
-    Rds,
-)
-from hooks.utils.aws_api import AWSApi
 from hooks.utils.blue_green_deployment_model import (
     POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME,
     BlueGreenDeploymentModel,
@@ -32,6 +20,21 @@ from hooks.utils.models import (
     WaitForSwitchoverCompletedAction,
 )
 from hooks.utils.wait import wait_for
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from mypy_boto3_rds.type_defs import (
+        BlueGreenDeploymentTypeDef,
+        DBInstanceTypeDef,
+        ParameterOutputTypeDef,
+    )
+
+    from er_aws_rds.input import (
+        AppInterfaceInput,
+        Rds,
+    )
+    from hooks.utils.aws_api import AWSApi
 
 
 class BlueGreenDeploymentManager:

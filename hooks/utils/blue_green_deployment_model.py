@@ -1,6 +1,5 @@
-from collections.abc import Callable
 from functools import cached_property
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from mypy_boto3_rds.type_defs import (
     BlueGreenDeploymentTypeDef,
@@ -30,6 +29,9 @@ from hooks.utils.models import (
     WaitForSwitchoverCompletedAction,
 )
 from hooks.utils.semantic import parse_semver
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 POSTGRES_LOGICAL_REPLICATION_PARAMETER_NAME = "rds.logical_replication"
 
