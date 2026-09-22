@@ -167,7 +167,8 @@ cython_debug/
 .DS_Store
 
 input.json
-credentials
+credentials*
+.erv2-itests/
 tmp/
 .gen
 

@@ -1,0 +1,6 @@
+output_dir: .erv2-itests
+scenarios_dir: integration-tests
+default_mode: erv2
+log_level: INFO
+target_account: app-sre/creds/terraform/ter-int-dev/config
+tf_state_account: app-sre/creds/terraform/ter-int-dev/config

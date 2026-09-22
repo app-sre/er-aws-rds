@@ -63,6 +63,62 @@ Export to current shell
 export $(cat .env | xargs)
 ```
 
+### Integration tests
+
+The integration-test scenarios use [`erv2-itest`](https://github.com/app-sre/erv2-itest)
+and the repository configuration in `.erv2_itest.yml`. Before running them, make
+sure that:
+
+* Vault CLI is authenticated so `erv2-itest` can obtain the AWS credentials.
+* Your AWS credentials can access the target account and Terraform state bucket.
+* A local Docker or Podman installation is available.
+
+Install the development dependencies and build the module image:
+
+```shell
+make dev
+make build
+```
+
+Preview a scenario without contacting Vault, Docker, or AWS:
+
+```shell
+uv run erv2-itest --dry-run integration-tests/basic/scenario.yaml
+```
+
+To exercise the replica storage update, first create and retain a basic source
+instance. Copy the `Run ID` printed by this command:
+
+```shell
+uv run erv2-itest --keep integration-tests/basic/scenario.yaml
+```
+
+Use that run ID for the replica scenario. The replica input uses the run ID for
+the source identifier and automatically gives the replica its own identifier
+and Terraform state key. It creates the replica at 20 GiB, changes it to 30 GiB,
+verifies the following reconcile is a no-op, and destroys the replica during
+cleanup.
+
+```shell
+SOURCE_RUN_ID="<source-run-id-from-output>"
+uv run erv2-itest \
+  --run-id "$SOURCE_RUN_ID" \
+  integration-tests/read-replica-storage-increase/scenario.yaml
+```
+
+Finally, clean up the retained basic source instance by selecting only its
+cleanup step:
+
+```shell
+uv run erv2-itest \
+  --run-id "$SOURCE_RUN_ID" \
+  --select '::destroy database' \
+  integration-tests/basic/scenario.yaml
+```
+
+Do not pass `--keep` to the cleanup command. The scenario logs and working
+directories are stored under `.erv2-itests/`.
+
 ### On Host
 
 Generate terraform config.
