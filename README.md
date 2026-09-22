@@ -26,6 +26,9 @@ This will auto create a `venv`, to activate in shell:
 source .venv/bin/activate
 ```
 
+The commands below assume this virtual environment is active; `erv2-itest` is
+installed as a development dependency.
+
 ### Manage Terraform Providers
 
 * update versions in [versions.tf](./module/versions.tf)
@@ -83,14 +86,14 @@ make build
 Preview a scenario without contacting Vault, Docker, or AWS:
 
 ```shell
-uv run erv2-itest --dry-run integration-tests/basic/scenario.yaml
+erv2-itest --dry-run integration-tests/basic/scenario.yaml
 ```
 
 To exercise the replica storage update, first create and retain a basic source
 instance. Copy the `Run ID` printed by this command:
 
 ```shell
-uv run erv2-itest --keep integration-tests/basic/scenario.yaml
+erv2-itest --keep integration-tests/basic/scenario.yaml
 ```
 
 Use that run ID for the replica scenario. The replica input uses the run ID for
@@ -101,7 +104,7 @@ cleanup.
 
 ```shell
 SOURCE_RUN_ID="<source-run-id-from-output>"
-uv run erv2-itest \
+erv2-itest \
   --run-id "$SOURCE_RUN_ID" \
   integration-tests/read-replica-storage-increase/scenario.yaml
 ```
@@ -110,7 +113,7 @@ Finally, clean up the retained basic source instance by selecting only its
 cleanup step:
 
 ```shell
-uv run erv2-itest \
+erv2-itest \
   --run-id "$SOURCE_RUN_ID" \
   --select '::destroy database' \
   integration-tests/basic/scenario.yaml
