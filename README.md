@@ -69,8 +69,19 @@ export $(cat .env | xargs)
 ### Integration tests
 
 The integration-test scenarios use [`erv2-itest`](https://github.com/app-sre/erv2-itest)
-and the repository configuration in `.erv2_itest.yml`. Before running them, make
-sure that:
+and a local `.erv2_itest.yml` configuration file. Create it from the committed
+example and set the Vault paths for your environment:
+
+```shell
+cp .erv2_itest.yml.example .erv2_itest.yml
+```
+
+`target_account` identifies the Vault KVv2 path containing the target AWS
+credentials, and `tf_state_account` identifies the path containing the
+Terraform state credentials. The local `.erv2_itest.yml` is ignored and must
+not be committed because these paths are environment-specific.
+
+Before running the scenarios, make sure that:
 
 * Vault CLI is authenticated so `erv2-itest` can obtain the AWS credentials.
 * Your AWS credentials can access the target account and Terraform state bucket.
