@@ -1164,7 +1164,7 @@ def test_run_for_read_replica_has_blue_green_deployment_enabled(
         (
             "SWITCHOVER_FAILED",
             "replication is behind",
-            "blue_green_deployment.switchover: false",
+            "blue_green_deployment.delete: true",
         ),
     ],
 )
@@ -1250,11 +1250,11 @@ def test_fresh_invalid_configuration_requires_explicit_delete(
     mock_aws_api.delete_blue_green_deployment.assert_not_called()
 
 
-def test_fresh_failed_switchover_fails_even_when_delete_is_requested(
+def test_fresh_failed_switchover_requires_explicit_delete(
     mock_aws_api: Mock,
     mock_logging: Mock,
 ) -> None:
-    """A failed switchover is reported instead of starting another action."""
+    """A failed switchover fails promptly unless cleanup is requested."""
     del mock_logging
     setup_aws_api_side_effects(
         mock_aws_api,
@@ -1268,12 +1268,14 @@ def test_fresh_failed_switchover_fails_even_when_delete_is_requested(
     manager = BlueGreenDeploymentManager(
         aws_api=mock_aws_api,
         app_interface_input=input_object(
-            build_blue_green_deployment_data(enabled=True, switchover=True, delete=True)
+            build_blue_green_deployment_data(enabled=True, switchover=True)
         ),
         dry_run=False,
     )
 
-    with pytest.raises(RuntimeError, match="SWITCHOVER_FAILED") as error:
+    with pytest.raises(
+        RuntimeError, match=r"blue_green_deployment\.delete: true"
+    ) as error:
         manager.run()
 
     assert "replication is behind" in str(error.value)
@@ -1282,23 +1284,26 @@ def test_fresh_failed_switchover_fails_even_when_delete_is_requested(
     mock_aws_api.delete_blue_green_deployment.assert_not_called()
 
 
-def test_delete_invalid_configuration_uses_delete_without_switchover(
+@pytest.mark.parametrize("status", ["INVALID_CONFIGURATION", "SWITCHOVER_FAILED"])
+def test_delete_terminal_failure_uses_delete_without_switchover(
     mock_aws_api: Mock,
     mock_logging: Mock,
+    *,
+    status: str,
 ) -> None:
-    """An explicit delete request takes the cleanup path without creation checks."""
+    """An explicit delete request cleans up terminal states without creation checks."""
     del mock_logging
     setup_aws_api_side_effects(
         mock_aws_api,
         get_blue_green_deployment=[
-            build_blue_green_deployment_response(status="INVALID_CONFIGURATION"),
+            build_blue_green_deployment_response(status=status),
             None,
         ],
     )
     manager = BlueGreenDeploymentManager(
         aws_api=mock_aws_api,
         app_interface_input=input_object(
-            build_blue_green_deployment_data(enabled=True, delete=True)
+            build_blue_green_deployment_data(enabled=True, switchover=True, delete=True)
         ),
         dry_run=False,
     )
@@ -1307,17 +1312,21 @@ def test_delete_invalid_configuration_uses_delete_without_switchover(
 
     mock_aws_api.get_db_instance.assert_not_called()
     mock_aws_api.delete_db_instance.assert_not_called()
+    mock_aws_api.switchover_blue_green_deployment.assert_not_called()
     mock_aws_api.delete_blue_green_deployment.assert_called_once_with(
         "some-bg-id", delete_target=True
     )
     assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
-def test_delete_requested_before_invalid_configuration_is_detected_while_waiting(
+@pytest.mark.parametrize("status", ["INVALID_CONFIGURATION", "SWITCHOVER_FAILED"])
+def test_delete_requested_before_terminal_failure_is_detected_while_waiting(
     mock_aws_api: Mock,
     mock_logging: Mock,
+    *,
+    status: str,
 ) -> None:
-    """Use the no-switchover cleanup path when polling discovers the failure."""
+    """Use no-switchover cleanup when polling discovers a terminal failure."""
     del mock_logging
     setup_aws_api_side_effects(
         mock_aws_api,
@@ -1326,9 +1335,7 @@ def test_delete_requested_before_invalid_configuration_is_detected_while_waiting
             build_blue_green_deployment_response(
                 status="PROVISIONING", switchover_details=[]
             ),
-            build_blue_green_deployment_response(
-                status="INVALID_CONFIGURATION", switchover_details=[]
-            ),
+            build_blue_green_deployment_response(status=status, switchover_details=[]),
             None,
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
@@ -1352,17 +1359,18 @@ def test_delete_requested_before_invalid_configuration_is_detected_while_waiting
     assert mock_aws_api.get_blue_green_deployment.call_count == 3
 
 
-def test_delete_invalid_configuration_propagates_aws_error(
+@pytest.mark.parametrize("status", ["INVALID_CONFIGURATION", "SWITCHOVER_FAILED"])
+def test_delete_terminal_failure_propagates_aws_error(
     mock_aws_api: Mock,
     mock_logging: Mock,
+    *,
+    status: str,
 ) -> None:
     """Surface AWS delete failures without starting an unbounded deletion wait."""
     del mock_logging
     setup_aws_api_side_effects(
         mock_aws_api,
-        get_blue_green_deployment=[
-            build_blue_green_deployment_response(status="INVALID_CONFIGURATION")
-        ],
+        get_blue_green_deployment=[build_blue_green_deployment_response(status=status)],
     )
     mock_aws_api.delete_blue_green_deployment.side_effect = RuntimeError(
         "InvalidBlueGreenDeploymentStateFault"

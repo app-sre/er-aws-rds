@@ -398,9 +398,11 @@ class BlueGreenDeploymentManager:
             return
         assert self.model.blue_green_deployment
         match self.model.state:
+            case State.INVALID_CONFIGURATION | State.SWITCHOVER_FAILED if (
+                self.model.config.delete
+            ):
+                return
             case State.INVALID_CONFIGURATION:
-                if self.model.config.delete:
-                    return
                 raise self._invalid_configuration_error(
                     self.model.blue_green_deployment
                 )
@@ -433,9 +435,8 @@ class BlueGreenDeploymentManager:
         details = self._status_details_suffix(deployment)
         return RuntimeError(
             f"Blue/Green deployment {identifier} failed with status "
-            f"SWITCHOVER_FAILED{details}. Set blue_green_deployment.switchover: "
-            "false while replication catches up, then set it to true in a later "
-            "run to start a new attempt."
+            f"SWITCHOVER_FAILED{details}. Set blue_green_deployment.delete: true "
+            "to request cleanup."
         )
 
     def _switchover_cancelled_error(

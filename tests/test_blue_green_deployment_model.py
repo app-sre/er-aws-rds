@@ -78,13 +78,10 @@ def test_terminal_failure_state_can_plan_cleanup_without_creation_data(
 
     assert model.state == expected_state
     actions = [action.type for action in model.plan_actions()]
-    if status == "INVALID_CONFIGURATION":
-        assert actions == [
-            ActionType.DELETE_WITHOUT_SWITCHOVER,
-            ActionType.WAIT_FOR_DELETED,
-        ]
-    else:
-        assert actions == []
+    assert actions == [
+        ActionType.DELETE_WITHOUT_SWITCHOVER,
+        ActionType.WAIT_FOR_DELETED,
+    ]
 
 
 def test_validate_target_parameter_group() -> None:

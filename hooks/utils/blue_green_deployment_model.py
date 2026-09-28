@@ -400,8 +400,8 @@ class BlueGreenDeploymentModel(BaseModel):
                 [State.SWITCHOVER_COMPLETED],
             ),
             State.SWITCHOVER_FAILED: (
-                self._route_switchover_failed,
-                [],
+                self._route_terminal_failure,
+                [State.DELETING],
             ),
             State.SWITCHOVER_IN_PROGRESS: (
                 self._route_wait_for_switchover_completion,
@@ -477,10 +477,6 @@ class BlueGreenDeploymentModel(BaseModel):
     def _route_terminal_failure(self) -> BaseAction | None:
         if self.config.delete:
             return DeleteWithoutSwitchoverAction(next_state=State.DELETING)
-        return None
-
-    @staticmethod
-    def _route_switchover_failed() -> BaseAction | None:
         return None
 
     @staticmethod
