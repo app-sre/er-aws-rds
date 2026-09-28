@@ -1396,23 +1396,23 @@ def test_delete_terminal_failure_propagates_aws_error(
     (
         "deployment_statuses",
         "switchover_response_status",
-        "expected_message",
+        "cleanup_expected",
     ),
     [
         (
             ["SWITCHOVER_IN_PROGRESS", "SWITCHOVER_FAILED"],
             None,
-            "SWITCHOVER_FAILED",
+            True,
         ),
         (
             ["AVAILABLE", "SWITCHOVER_IN_PROGRESS", "AVAILABLE"],
             "SWITCHOVER_IN_PROGRESS",
-            "cancelled or rolled back",
+            False,
         ),
         (
             ["AVAILABLE", "AVAILABLE"],
             "SWITCHOVER_IN_PROGRESS",
-            "cancelled or rolled back",
+            False,
         ),
     ],
 )
@@ -1422,9 +1422,9 @@ def test_failed_or_cancelled_switchover_does_not_delete_source(
     *,
     deployment_statuses: list[str],
     switchover_response_status: str | None,
-    expected_message: str,
+    cleanup_expected: bool,
 ) -> None:
-    """Stop before source deletion if AWS fails or cancels the switchover."""
+    """Keep the source when failure or cancellation blocks a requested deletion."""
     del mock_logging
     setup_aws_api_side_effects(
         mock_aws_api,
@@ -1442,6 +1442,7 @@ def test_failed_or_cancelled_switchover_does_not_delete_source(
                 )
                 for status in deployment_statuses[1:]
             ],
+            *([None] if cleanup_expected else []),
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
         get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
@@ -1457,7 +1458,7 @@ def test_failed_or_cancelled_switchover_does_not_delete_source(
     manager = BlueGreenDeploymentManager(
         aws_api=mock_aws_api,
         app_interface_input=input_object(
-            build_blue_green_deployment_data(enabled=True, switchover=True)
+            build_blue_green_deployment_data(enabled=True, switchover=True, delete=True)
         ),
         dry_run=False,
     )
@@ -1473,26 +1474,27 @@ def test_failed_or_cancelled_switchover_does_not_delete_source(
         while not condition():
             pass
 
-    with (
-        patch(
-            "hooks.utils.blue_green_deployment_manager.wait_for",
-            side_effect=no_sleep_wait_for,
-        ),
-        pytest.raises(RuntimeError, match=expected_message) as error,
+    with patch(
+        "hooks.utils.blue_green_deployment_manager.wait_for",
+        side_effect=no_sleep_wait_for,
     ):
-        manager.run()
+        if cleanup_expected:
+            assert manager.run() == State.NO_OP
+        else:
+            with pytest.raises(RuntimeError, match="cancelled or rolled back") as error:
+                manager.run()
+            assert "green database is still catching up" in str(error.value)
 
-    assert "green database is still catching up" in str(error.value)
     assert manager.model is not None
-    assert (
-        manager.model.state
-        == {
-            "SWITCHOVER_IN_PROGRESS": State.SWITCHOVER_FAILED,
-            "AVAILABLE": State.SWITCHOVER_CANCELLED,
-        }[deployment_statuses[0]]
-    )
+    if not cleanup_expected:
+        assert manager.model.state == State.SWITCHOVER_CANCELLED
     mock_aws_api.delete_db_instance.assert_not_called()
-    mock_aws_api.delete_blue_green_deployment.assert_not_called()
+    if cleanup_expected:
+        mock_aws_api.delete_blue_green_deployment.assert_called_once_with(
+            "some-bg-id", delete_target=True
+        )
+    else:
+        mock_aws_api.delete_blue_green_deployment.assert_not_called()
 
 
 def test_initial_available_status_is_not_switchover_cancellation(
