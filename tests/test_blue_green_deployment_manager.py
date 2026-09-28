@@ -1385,16 +1385,25 @@ def test_delete_invalid_configuration_propagates_aws_error(
 
 
 @pytest.mark.parametrize(
-    ("initial_status", "poll_statuses", "expected_message"),
+    (
+        "deployment_statuses",
+        "switchover_response_status",
+        "expected_message",
+    ),
     [
         (
-            "SWITCHOVER_IN_PROGRESS",
-            ["SWITCHOVER_FAILED"],
+            ["SWITCHOVER_IN_PROGRESS", "SWITCHOVER_FAILED"],
+            None,
             "SWITCHOVER_FAILED",
         ),
         (
-            "AVAILABLE",
-            ["SWITCHOVER_IN_PROGRESS", "AVAILABLE"],
+            ["AVAILABLE", "SWITCHOVER_IN_PROGRESS", "AVAILABLE"],
+            "SWITCHOVER_IN_PROGRESS",
+            "cancelled or rolled back",
+        ),
+        (
+            ["AVAILABLE", "AVAILABLE"],
+            "SWITCHOVER_IN_PROGRESS",
             "cancelled or rolled back",
         ),
     ],
@@ -1403,8 +1412,8 @@ def test_failed_or_cancelled_switchover_does_not_delete_source(
     mock_aws_api: Mock,
     mock_logging: Mock,
     *,
-    initial_status: str,
-    poll_statuses: list[str],
+    deployment_statuses: list[str],
+    switchover_response_status: str | None,
     expected_message: str,
 ) -> None:
     """Stop before source deletion if AWS fails or cancels the switchover."""
@@ -1417,19 +1426,26 @@ def test_failed_or_cancelled_switchover_does_not_delete_source(
             DEFAULT_TARGET_RDS_INSTANCE,
         ],
         get_blue_green_deployment=[
-            build_blue_green_deployment_response(status=initial_status),
+            build_blue_green_deployment_response(status=deployment_statuses[0]),
             *[
                 build_blue_green_deployment_response(
                     status=status,
                     status_details="green database is still catching up",
                 )
-                for status in poll_statuses
+                for status in deployment_statuses[1:]
             ],
         ],
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
         get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
         get_db_parameters=[DEFAULT_SOURCE_DB_PARAMETERS],
     )
+    if switchover_response_status is not None:
+        mock_aws_api.switchover_blue_green_deployment.return_value = (
+            build_blue_green_deployment_response(
+                status=switchover_response_status,
+                status_details="switchover started",
+            )
+        )
     manager = BlueGreenDeploymentManager(
         aws_api=mock_aws_api,
         app_interface_input=input_object(
@@ -1465,7 +1481,7 @@ def test_failed_or_cancelled_switchover_does_not_delete_source(
         == {
             "SWITCHOVER_IN_PROGRESS": State.SWITCHOVER_FAILED,
             "AVAILABLE": State.SWITCHOVER_CANCELLED,
-        }[initial_status]
+        }[deployment_statuses[0]]
     )
     mock_aws_api.delete_db_instance.assert_not_called()
     mock_aws_api.delete_blue_green_deployment.assert_not_called()
@@ -1493,6 +1509,9 @@ def test_initial_available_status_is_not_switchover_cancellation(
         get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
         get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
         get_db_parameters=[DEFAULT_SOURCE_DB_PARAMETERS],
+    )
+    mock_aws_api.switchover_blue_green_deployment.return_value = (
+        build_blue_green_deployment_response(status="AVAILABLE")
     )
     manager = BlueGreenDeploymentManager(
         aws_api=mock_aws_api,
