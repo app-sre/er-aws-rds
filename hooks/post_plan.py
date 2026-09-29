@@ -208,7 +208,7 @@ class RDSPlanValidator:
         if resource_changes:
             self.errors.append(
                 "There are pending resource changes after a Blue/Green Deployment. "
-                "Check the Terraform plan output above."
+                "Check the Terraform plan output."
             )
 
     @staticmethod
