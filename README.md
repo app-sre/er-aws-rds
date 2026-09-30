@@ -142,8 +142,9 @@ erv2-itest integration-tests/storage-update-password-guard/scenario.yaml
 ```
 
 For a manual password-reset probe during storage optimization, run the scenario
-one step at a time. The first command creates the database; note its printed Run
-ID:
+one step at a time. The `.yaml.example` file is excluded from default
+auto-discovery and can be passed explicitly to `erv2-itest`. The first command
+creates the database; note its printed Run ID:
 
 ```shell
 erv2-itest --keep --select "::create database" integration-tests/storage-update-password-guard/scenario.yaml
@@ -161,7 +162,7 @@ post-plan guard to reject the password reset, and cannot change the password if
 the instance has already returned to `available`:
 
 ```shell
-erv2-itest --run-id "<run-id>" manual-integration-tests/password-reset-during-storage-optimization.yaml
+erv2-itest --run-id "<run-id>" integration-tests/manual/password-reset-during-storage-optimization.yaml.example
 ```
 
 Verify steady state and clean up the retained database:
