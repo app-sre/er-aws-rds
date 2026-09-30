@@ -264,8 +264,17 @@ def test_validate_rds_update_when_instance_is_missing(
                 "type": "aws_db_instance",
                 "change": {
                     "actions": [Action.ActionUpdate],
-                    "before": {"identifier": "test-rds", "region": "us-east-1"},
-                    "after": {"identifier": "test-rds"},
+                    "before": {
+                        "identifier": "test-rds",
+                        "engine": "postgres",
+                        "engine_version": "15.7",
+                        "region": "us-east-1",
+                    },
+                    "after": {
+                        "identifier": "test-rds",
+                        "engine": "postgres",
+                        "engine_version": "15.7",
+                    },
                     "after_unknown": {},
                 },
             },
