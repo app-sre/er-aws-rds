@@ -170,16 +170,23 @@ class RDSPlanValidator:
                     "RDS instances cannot change regions in-place."
                 )
 
-    def _validate_db_instance_availability(self) -> None:
-        """Reject updates while another AWS operation is modifying the DB instance."""
-        if not self.aws_db_instance_updates:
+    def _validate_password_reset_availability(self) -> None:
+        """Reject generated password resets while the RDS instance is unavailable."""
+        # Keep non-password recovery updates, such as storage increases, available.
+        password_reset_planned = any(
+            resource.type == "random_password"
+            and resource.change
+            and Action.ActionCreate in resource.change.actions
+            for resource in self.plan.resource_changes
+        )
+        if not self.aws_db_instance_updates or not password_reset_planned:
             return
 
         identifier = self.input.data.identifier
         db_instance = self.aws_api.get_db_instance(identifier)
         if db_instance is None:
             self.errors.append(
-                f"Cannot update RDS instance {identifier}: it was not found in AWS. "
+                f"Cannot reset password for RDS instance {identifier}: it was not found in AWS. "
                 "Refresh the Terraform plan before applying."
             )
             return
@@ -192,7 +199,7 @@ class RDSPlanValidator:
                 else "AWS did not report DBInstanceStatus"
             )
             self.errors.append(
-                f"Cannot update RDS instance {identifier}: {status_message}. "
+                f"Cannot reset password for RDS instance {identifier}: {status_message}. "
                 "Terraform apply was not started. Wait until AWS "
                 "reports 'available', then rerun the reconciliation."
             )
@@ -417,7 +424,7 @@ class RDSPlanValidator:
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
         self.errors.clear()
-        self._validate_db_instance_availability()
+        self._validate_password_reset_availability()
         self._validate_version_on_create()
         self._validate_version_upgrade()
         self._validate_region_change()

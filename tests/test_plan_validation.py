@@ -146,12 +146,12 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
     "status",
     ["backing-up", "upgrading", "modifying", None],
 )
-def test_validate_rds_update_when_instance_not_available(
+def test_validate_password_reset_when_instance_not_available(
     mock_aws_api: Mock,
     *,
     status: str | None,
 ) -> None:
-    """Do not apply updates unless AWS reports that the RDS instance is available."""
+    """Do not reset the generated password unless AWS reports that the RDS instance is available."""
     if status is None:
         mock_aws_api.return_value.get_db_instance.return_value = {
             key: value
@@ -212,7 +212,7 @@ def test_validate_rds_update_when_instance_not_available(
     )
     assert validator.validate() == [
         (
-            f"Cannot update RDS instance test-rds: {status_message}. "
+            f"Cannot reset password for RDS instance test-rds: {status_message}. "
             "Terraform apply was not started. Wait until AWS reports 'available', "
             "then rerun the reconciliation."
         )
@@ -220,12 +220,21 @@ def test_validate_rds_update_when_instance_not_available(
     mock_aws_api.return_value.get_db_instance.assert_called_once_with("test-rds")
 
 
-def test_validate_rds_update_when_instance_is_available(
+def test_validate_password_reset_when_instance_is_available(
     mock_aws_api: Mock,
 ) -> None:
-    """Allow a planned RDS update when AWS reports the instance is available."""
+    """Allow a password reset when AWS reports the instance is available."""
     plan = Plan.model_validate({
         "resource_changes": [
+            {
+                "type": "random_password",
+                "change": {
+                    "actions": [Action.ActionDelete, Action.ActionCreate],
+                    "before": {"keepers": {"reset_password": "previous"}},
+                    "after": {"keepers": {"reset_password": "APPSRE-15344"}},
+                    "after_unknown": {},
+                },
+            },
             {
                 "type": "aws_db_instance",
                 "change": {
@@ -253,13 +262,22 @@ def test_validate_rds_update_when_instance_is_available(
     mock_aws_api.return_value.get_db_instance.assert_called_once_with("test-rds")
 
 
-def test_validate_rds_update_when_instance_is_missing(
+def test_validate_password_reset_when_instance_is_missing(
     mock_aws_api: Mock,
 ) -> None:
-    """Reject a stale update plan when its RDS instance is missing in AWS."""
+    """Reject a password reset when the RDS instance is missing in AWS."""
     mock_aws_api.return_value.get_db_instance.return_value = None
     plan = Plan.model_validate({
         "resource_changes": [
+            {
+                "type": "random_password",
+                "change": {
+                    "actions": [Action.ActionDelete, Action.ActionCreate],
+                    "before": {"keepers": {"reset_password": "previous"}},
+                    "after": {"keepers": {"reset_password": "APPSRE-15344"}},
+                    "after_unknown": {},
+                },
+            },
             {
                 "type": "aws_db_instance",
                 "change": {
@@ -285,7 +303,7 @@ def test_validate_rds_update_when_instance_is_missing(
 
     assert validator.validate() == [
         (
-            "Cannot update RDS instance test-rds: it was not found in AWS. "
+            "Cannot reset password for RDS instance test-rds: it was not found in AWS. "
             "Refresh the Terraform plan before applying."
         )
     ]
@@ -447,9 +465,9 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
     assert errors == []
 
 
-def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_delete(
-    mock_aws_api: Mock,
-) -> None:
+def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_delete() -> (
+    None
+):
     """Test no changes when Blue/Green Deployment is enabled"""
     plan = Plan.model_validate({
         "resource_changes": [
@@ -493,7 +511,6 @@ def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_de
     errors = validator.validate()
 
     assert errors == []
-    mock_aws_api.return_value.get_db_instance.assert_called_once_with("test-rds")
 
 
 @pytest.mark.parametrize(
