@@ -211,9 +211,11 @@ def test_validate_rds_update_when_instance_not_available(
         else "AWS did not report DBInstanceStatus"
     )
     assert validator.validate() == [
-        f"Cannot update RDS instance test-rds: {status_message}. "
-        "Terraform apply was not started. Wait until AWS reports 'available', "
-        "then rerun the reconciliation."
+        (
+            f"Cannot update RDS instance test-rds: {status_message}. "
+            "Terraform apply was not started. Wait until AWS reports 'available', "
+            "then rerun the reconciliation."
+        )
     ]
     mock_aws_api.return_value.get_db_instance.assert_called_once_with("test-rds")
 
@@ -273,8 +275,10 @@ def test_validate_rds_update_when_instance_is_missing(
     validator = RDSPlanValidator(plan, input_object())
 
     assert validator.validate() == [
-        "Cannot update RDS instance test-rds: it was not found in AWS. "
-        "Refresh the Terraform plan before applying."
+        (
+            "Cannot update RDS instance test-rds: it was not found in AWS. "
+            "Refresh the Terraform plan before applying."
+        )
     ]
 
 
