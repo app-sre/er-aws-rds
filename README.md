@@ -133,43 +133,17 @@ erv2-itest \
 Do not pass `--keep` to the cleanup command. The scenario logs and working
 directories are stored under `.erv2-itests/`.
 
-The primary-instance storage-guard scenario exercises a storage increase
-without changing the generated password:
+The primary-instance storage-guard scenario increases storage, attempts a
+password reset immediately afterward while RDS is in `storage-optimization`.
+It then verifies the rejected reset left the next reconcile unchanged. The
+reset step is a dry-run and expects the post-plan guard to stop Terraform
+before apply, so it does not change the database password. Rebuild the local
+module image after switching worktrees or changing the hook source:
 
 ```shell
+make build
 erv2-itest --dry-run integration-tests/storage-update-password-guard/scenario.yaml
 erv2-itest integration-tests/storage-update-password-guard/scenario.yaml
-```
-
-For a manual password-reset probe during storage optimization, run the scenario
-one step at a time. The `.yaml.example` file is excluded from default
-auto-discovery and can be passed explicitly to `erv2-itest`. The first command
-creates the database; note its printed Run ID:
-
-```shell
-erv2-itest --keep --select "::create database" integration-tests/storage-update-password-guard/scenario.yaml
-```
-
-Use that Run ID to increase storage, then confirm in RDS that the status is
-`storage-optimization`:
-
-```shell
-erv2-itest --run-id "<run-id>" --keep --select "::increase allocated storage" integration-tests/storage-update-password-guard/scenario.yaml
-```
-
-Run the manual-only dry-run probe while that status is present. It expects the
-post-plan guard to reject the password reset, and cannot change the password if
-the instance has already returned to `available`:
-
-```shell
-erv2-itest --run-id "<run-id>" integration-tests/manual/password-reset-during-storage-optimization.yaml.example
-```
-
-Verify steady state and clean up the retained database:
-
-```shell
-erv2-itest --run-id "<run-id>" --select "::verify steady state" integration-tests/storage-update-password-guard/scenario.yaml
-erv2-itest --run-id "<run-id>" --select "::destroy database" integration-tests/storage-update-password-guard/scenario.yaml
 ```
 
 RDS enters `storage-optimization` after a storage size change, and this state
