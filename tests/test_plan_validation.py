@@ -438,9 +438,9 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
     assert errors == []
 
 
-def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_delete() -> (
-    None
-):
+def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_delete(
+    mock_aws_api: Mock,
+) -> None:
     """Test no changes when Blue/Green Deployment is enabled"""
     plan = Plan.model_validate({
         "resource_changes": [
@@ -484,6 +484,7 @@ def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_de
     errors = validator.validate()
 
     assert errors == []
+    mock_aws_api.return_value.get_db_instance.assert_called_once_with("test-rds")
 
 
 @pytest.mark.parametrize(
