@@ -133,12 +133,11 @@ erv2-itest \
 Do not pass `--keep` to the cleanup command. The scenario logs and working
 directories are stored under `.erv2-itests/`.
 
-The primary-instance storage-guard scenario increases storage, verifies the
-next reconcile is unchanged, then attempts a password reset while RDS remains
-in `storage-optimization`. The reset step is a dry-run and expects the post-plan
-guard to stop Terraform before apply, so it does not change the database
-password. Rebuild the local module image after switching worktrees or changing
-the hook source:
+The primary-instance storage-guard scenario increases storage, then attempts a
+password reset immediately afterward while RDS is in `storage-optimization`.
+The reset step is a dry-run and expects the post-plan guard to stop Terraform
+before apply, so it does not change the database password. Rebuild the local
+module image after switching worktrees or changing the hook source:
 
 ```shell
 make build

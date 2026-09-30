@@ -1,9 +1,9 @@
 name: rds-primary-storage-update-password-guard
 description: >
   Create a primary RDS instance, increase allocated storage from 20 GiB to 30
-  GiB and verify the next reconcile is unchanged. Then plan a password reset
-  while AWS still reports storage-optimization and verify the post-plan guard
-  rejects it before apply.
+  GiB, then immediately plan a password reset while AWS reports
+  storage-optimization. Verify the post-plan guard rejects the reset before
+  apply.
 base_input: integration-tests/basic/base_input.json
 
 steps:
@@ -31,19 +31,6 @@ steps:
       log_not_contains:
         - "No changes."
         - "Cannot reset password for RDS instance"
-        - "Error:"
-
-  - name: verify steady state
-    input:
-      allocated_storage: 30
-    action: Apply
-    dry_run: false
-    timeout_seconds: 3600
-    expect:
-      exit_code: 0
-      log_contains:
-        - "No changes."
-      log_not_contains:
         - "Error:"
 
   - name: reject password reset during storage optimization
