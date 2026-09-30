@@ -418,9 +418,6 @@ class RDSPlanValidator:
         """Validate method, return validation errors"""
         self.errors.clear()
         self._validate_db_instance_availability()
-        if self.errors:
-            return self.errors
-
         self._validate_version_on_create()
         self._validate_version_upgrade()
         self._validate_region_change()
