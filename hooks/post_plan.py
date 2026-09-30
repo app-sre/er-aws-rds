@@ -170,6 +170,33 @@ class RDSPlanValidator:
                     "RDS instances cannot change regions in-place."
                 )
 
+    def _validate_db_instance_availability(self) -> None:
+        """Reject updates while another AWS operation is modifying the DB instance."""
+        if not self.aws_db_instance_updates:
+            return
+
+        identifier = self.input.data.identifier
+        db_instance = self.aws_api.get_db_instance(identifier)
+        if db_instance is None:
+            self.errors.append(
+                f"Cannot update RDS instance {identifier}: it was not found in AWS. "
+                "Refresh the Terraform plan before applying."
+            )
+            return
+
+        status = db_instance.get("DBInstanceStatus")
+        if status != "available":
+            status_message = (
+                f"AWS reports status '{status}'"
+                if status is not None
+                else "AWS did not report DBInstanceStatus"
+            )
+            self.errors.append(
+                f"Cannot update RDS instance {identifier}: {status_message}. "
+                "Terraform apply was not started. Wait until AWS "
+                "reports 'available', then rerun the reconciliation."
+            )
+
     def _validate_deletion_protection_not_enabled_on_destroy(self) -> None:
         for u in self.aws_db_instance_deletions:
             if not u.change or not u.change.before:
@@ -390,6 +417,10 @@ class RDSPlanValidator:
     def validate(self) -> list[str]:
         """Validate method, return validation errors"""
         self.errors.clear()
+        self._validate_db_instance_availability()
+        if self.errors:
+            return self.errors
+
         self._validate_version_on_create()
         self._validate_version_upgrade()
         self._validate_region_change()
