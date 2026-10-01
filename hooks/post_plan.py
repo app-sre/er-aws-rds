@@ -200,8 +200,8 @@ class RDSPlanValidator:
             )
             self.errors.append(
                 f"Cannot reset password for RDS instance {identifier}: {status_message}. "
-                "Terraform apply was not started. Wait until AWS "
-                "reports 'available', then rerun the reconciliation."
+                "Terraform apply was not started. Please wait until AWS reports "
+                "the RDS instance as 'available', then retry the reconciliation."
             )
 
     def _validate_deletion_protection_not_enabled_on_destroy(self) -> None:

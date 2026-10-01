@@ -213,8 +213,8 @@ def test_validate_password_reset_when_instance_not_available(
     assert validator.validate() == [
         (
             f"Cannot reset password for RDS instance test-rds: {status_message}. "
-            "Terraform apply was not started. Wait until AWS reports 'available', "
-            "then rerun the reconciliation."
+            "Terraform apply was not started. Please wait until AWS reports the RDS "
+            "instance as 'available', then retry the reconciliation."
         )
     ]
     mock_aws_api.return_value.get_db_instance.assert_called_once_with("test-rds")
