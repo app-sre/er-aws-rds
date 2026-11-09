@@ -10,13 +10,13 @@ from external_resources_io.terraform import Action, Plan
 
 from hooks.post_plan import RDSPlanValidator
 
-from .conftest import DEFAULT_RDS_INSTANCE, input_object
+from .conftest import DEFAULT_RDS_INSTANCE, input_object, plan_data
 
 
 @pytest.fixture
 def new_instance_plan() -> dict[str, Any]:
     "Return a plan for an rds instance creation"
-    return {
+    return plan_data({
         "resource_changes": [
             {
                 "type": "aws_db_instance",
@@ -32,7 +32,7 @@ def new_instance_plan() -> dict[str, Any]:
                 },
             }
         ]
-    }
+    })
 
 
 @pytest.fixture
@@ -72,24 +72,26 @@ def test_validate_desired_version(
 
 def test_validate_deletion_protection_not_enabled_on_destroy() -> None:
     """Test instance deletion protection is not set when destroying the instance"""
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_instance",
-                "change": {
-                    "actions": [Action.ActionDelete],
-                    "before": {
-                        "engine": "postgres",
-                        "engine_version": "16.1",
-                        "deletion_protection": True,
-                        "region": "us-east-1",
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_instance",
+                    "change": {
+                        "actions": [Action.ActionDelete],
+                        "before": {
+                            "engine": "postgres",
+                            "engine_version": "16.1",
+                            "deletion_protection": True,
+                            "region": "us-east-1",
+                        },
+                        "after": None,
+                        "after_unknown": None,
                     },
-                    "after": None,
-                    "after_unknown": None,
-                },
-            }
-        ]
-    })
+                }
+            ]
+        })
+    )
 
     validator = RDSPlanValidator(plan, input_object())
     errors = validator.validate()
@@ -107,26 +109,28 @@ def test_validate_version_upgrade(mock_aws_api: Mock) -> None:
             "IsMajorVersionUpgrade": True,
         }
     }
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_instance",
-                "change": {
-                    "actions": [Action.ActionUpdate],
-                    "before": {
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                        "region": "us-east-1",
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_instance",
+                    "change": {
+                        "actions": [Action.ActionUpdate],
+                        "before": {
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                            "region": "us-east-1",
+                        },
+                        "after": {
+                            "engine": "postgres",
+                            "engine_version": "16.1",
+                        },
+                        "after_unknown": None,
                     },
-                    "after": {
-                        "engine": "postgres",
-                        "engine_version": "16.1",
-                    },
-                    "after_unknown": None,
-                },
-            }
-        ]
-    })
+                }
+            ]
+        })
+    )
 
     validator = RDSPlanValidator(
         plan,
@@ -162,46 +166,48 @@ def test_validate_password_reset_when_instance_not_available(
         mock_aws_api.return_value.get_db_instance.return_value = (
             DEFAULT_RDS_INSTANCE | {"DBInstanceStatus": status}
         )
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "random_password",
-                "change": {
-                    "actions": [Action.ActionDelete, Action.ActionCreate],
-                    "before": {"keepers": {"reset_password": "previous"}},
-                    "after": {"keepers": {"reset_password": "APPSRE-15344"}},
-                    "after_unknown": {},
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "random_password",
+                    "change": {
+                        "actions": [Action.ActionDelete, Action.ActionCreate],
+                        "before": {"keepers": {"reset_password": "previous"}},
+                        "after": {"keepers": {"reset_password": "APPSRE-15344"}},
+                        "after_unknown": {},
+                    },
                 },
-            },
-            {
-                "type": "aws_db_instance",
-                "change": {
+                {
+                    "type": "aws_db_instance",
+                    "change": {
+                        "actions": [Action.ActionUpdate],
+                        "before": {
+                            "identifier": "test-rds",
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                            "region": "us-east-1",
+                        },
+                        "after": {
+                            "identifier": "test-rds",
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                        },
+                        "after_unknown": {},
+                    },
+                },
+            ],
+            # The changed output would otherwise publish the rotated password.
+            "output_changes": {
+                "db_password": {
                     "actions": [Action.ActionUpdate],
-                    "before": {
-                        "identifier": "test-rds",
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                        "region": "us-east-1",
-                    },
-                    "after": {
-                        "identifier": "test-rds",
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                    },
-                    "after_unknown": {},
-                },
+                    "before": "previous",
+                    "after": "planned",
+                    "after_unknown": False,
+                }
             },
-        ],
-        # The changed output would otherwise publish the rotated password.
-        "output_changes": {
-            "db_password": {
-                "actions": [Action.ActionUpdate],
-                "before": "previous",
-                "after": "planned",
-                "after_unknown": False,
-            }
-        },
-    })
+        })
+    )
 
     validator = RDSPlanValidator(plan, input_object())
 
@@ -224,37 +230,39 @@ def test_validate_password_reset_when_instance_is_available(
     mock_aws_api: Mock,
 ) -> None:
     """Allow a password reset when AWS reports the instance is available."""
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "random_password",
-                "change": {
-                    "actions": [Action.ActionDelete, Action.ActionCreate],
-                    "before": {"keepers": {"reset_password": "previous"}},
-                    "after": {"keepers": {"reset_password": "APPSRE-15344"}},
-                    "after_unknown": {},
-                },
-            },
-            {
-                "type": "aws_db_instance",
-                "change": {
-                    "actions": [Action.ActionUpdate],
-                    "before": {
-                        "identifier": "test-rds",
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                        "region": "us-east-1",
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "random_password",
+                    "change": {
+                        "actions": [Action.ActionDelete, Action.ActionCreate],
+                        "before": {"keepers": {"reset_password": "previous"}},
+                        "after": {"keepers": {"reset_password": "APPSRE-15344"}},
+                        "after_unknown": {},
                     },
-                    "after": {
-                        "identifier": "test-rds",
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                    },
-                    "after_unknown": {},
                 },
-            },
-        ]
-    })
+                {
+                    "type": "aws_db_instance",
+                    "change": {
+                        "actions": [Action.ActionUpdate],
+                        "before": {
+                            "identifier": "test-rds",
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                            "region": "us-east-1",
+                        },
+                        "after": {
+                            "identifier": "test-rds",
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                        },
+                        "after_unknown": {},
+                    },
+                },
+            ]
+        })
+    )
 
     validator = RDSPlanValidator(plan, input_object())
 
@@ -267,37 +275,39 @@ def test_validate_password_reset_when_instance_is_missing(
 ) -> None:
     """Reject a password reset when the RDS instance is missing in AWS."""
     mock_aws_api.return_value.get_db_instance.return_value = None
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "random_password",
-                "change": {
-                    "actions": [Action.ActionDelete, Action.ActionCreate],
-                    "before": {"keepers": {"reset_password": "previous"}},
-                    "after": {"keepers": {"reset_password": "APPSRE-15344"}},
-                    "after_unknown": {},
-                },
-            },
-            {
-                "type": "aws_db_instance",
-                "change": {
-                    "actions": [Action.ActionUpdate],
-                    "before": {
-                        "identifier": "test-rds",
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                        "region": "us-east-1",
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "random_password",
+                    "change": {
+                        "actions": [Action.ActionDelete, Action.ActionCreate],
+                        "before": {"keepers": {"reset_password": "previous"}},
+                        "after": {"keepers": {"reset_password": "APPSRE-15344"}},
+                        "after_unknown": {},
                     },
-                    "after": {
-                        "identifier": "test-rds",
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                    },
-                    "after_unknown": {},
                 },
-            },
-        ]
-    })
+                {
+                    "type": "aws_db_instance",
+                    "change": {
+                        "actions": [Action.ActionUpdate],
+                        "before": {
+                            "identifier": "test-rds",
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                            "region": "us-east-1",
+                        },
+                        "after": {
+                            "identifier": "test-rds",
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                        },
+                        "after_unknown": {},
+                    },
+                },
+            ]
+        })
+    )
 
     validator = RDSPlanValidator(plan, input_object())
 
@@ -380,11 +390,13 @@ def test_validate_no_changes_when_blue_green_deployment_enabled(
             "ApplyType": "static",
         }
     }
-    plan = Plan.model_validate({
-        "resource_changes": [
-            change,
-        ]
-    })
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                change,
+            ]
+        })
+    )
     validator = RDSPlanValidator(
         plan,
         input_object({
@@ -446,7 +458,7 @@ def test_validate_no_changes_allow_delete_when_blue_green_deployment_enabled(
     change: dict,
 ) -> None:
     """Test delete is allowed when Blue/Green Deployment is enabled"""
-    plan = Plan.model_validate({"resource_changes": [change]})
+    plan = Plan.model_validate(plan_data({"resource_changes": [change]}))
     validator = RDSPlanValidator(
         plan,
         input_object({
@@ -469,32 +481,34 @@ def test_validate_no_changes_allow_when_blue_green_deployment_enabled_but_not_de
     None
 ):
     """Test no changes when Blue/Green Deployment is enabled"""
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_instance",
-                "change": {
-                    "actions": ["update"],
-                    "before": {
-                        "id": "some-id",
-                        "name": "test-rds",
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                        "deletion_protection": True,
-                        "region": "us-east-1",
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_instance",
+                    "change": {
+                        "actions": ["update"],
+                        "before": {
+                            "id": "some-id",
+                            "name": "test-rds",
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                            "deletion_protection": True,
+                            "region": "us-east-1",
+                        },
+                        "after": {
+                            "id": "test-rds-pg15",
+                            "name": "test-rds-pg15",
+                            "engine": "postgres",
+                            "engine_version": "15.7",
+                            "deletion_protection": False,
+                        },
+                        "after_unknown": {},
                     },
-                    "after": {
-                        "id": "test-rds-pg15",
-                        "name": "test-rds-pg15",
-                        "engine": "postgres",
-                        "engine_version": "15.7",
-                        "deletion_protection": False,
-                    },
-                    "after_unknown": {},
                 },
-            },
-        ]
-    })
+            ]
+        })
+    )
     validator = RDSPlanValidator(
         plan,
         input_object({
@@ -604,19 +618,21 @@ def test_validate_parameter_group_with_apply_method_only_change(
         }
     }
     mock_aws_api.return_value.get_db_parameter_group.return_value = None
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_parameter_group",
-                "change": {
-                    "actions": actions,
-                    "before": before,
-                    "after": after,
-                    "after_unknown": {},
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_parameter_group",
+                    "change": {
+                        "actions": actions,
+                        "before": before,
+                        "after": after,
+                        "after_unknown": {},
+                    },
                 },
-            },
-        ]
-    })
+            ]
+        })
+    )
     validator = RDSPlanValidator(plan, input_object())
 
     errors = validator.validate()
@@ -694,19 +710,21 @@ def test_validate_parameter_group_with_immediate_for_static_parameter(
         }
     }
     mock_aws_api.return_value.get_db_parameter_group.return_value = None
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_parameter_group",
-                "change": {
-                    "actions": [action],
-                    "before": before,
-                    "after": after,
-                    "after_unknown": {},
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_parameter_group",
+                    "change": {
+                        "actions": [action],
+                        "before": before,
+                        "after": after,
+                        "after_unknown": {},
+                    },
                 },
-            },
-        ]
-    })
+            ]
+        })
+    )
     validator = RDSPlanValidator(plan, input_object())
 
     errors = validator.validate()
@@ -779,19 +797,21 @@ def test_validate_parameter_group_with_unknown_parameters(
         }
     }
     mock_aws_api.return_value.get_db_parameter_group.return_value = None
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_parameter_group",
-                "change": {
-                    "actions": [action],
-                    "before": before,
-                    "after": after,
-                    "after_unknown": {},
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_parameter_group",
+                    "change": {
+                        "actions": [action],
+                        "before": before,
+                        "after": after,
+                        "after_unknown": {},
+                    },
                 },
-            },
-        ]
-    })
+            ]
+        })
+    )
     validator = RDSPlanValidator(plan, input_object())
 
     errors = validator.validate()
@@ -801,41 +821,43 @@ def test_validate_parameter_group_with_unknown_parameters(
 
 def test_validate_parameter_group_deletion() -> None:
     """Test parameter group deletion validation"""
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_instance",
-                "change": {
-                    "actions": ["no-op"],
-                    "before": {
-                        "engine": "postgres",
-                        "engine_version": "15.3",
-                        "parameter_group_name": "test-rds-pg15",
-                        "region": "us-east-1",
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_instance",
+                    "change": {
+                        "actions": ["no-op"],
+                        "before": {
+                            "engine": "postgres",
+                            "engine_version": "15.3",
+                            "parameter_group_name": "test-rds-pg15",
+                            "region": "us-east-1",
+                        },
+                        "after": {
+                            "engine": "postgres",
+                            "engine_version": "15.3",
+                            "parameter_group_name": "test-rds-pg15",
+                        },
+                        "after_unknown": None,
                     },
-                    "after": {
-                        "engine": "postgres",
-                        "engine_version": "15.3",
-                        "parameter_group_name": "test-rds-pg15",
-                    },
-                    "after_unknown": None,
                 },
-            },
-            {
-                "type": "aws_db_parameter_group",
-                "change": {
-                    "actions": ["delete"],
-                    "before": {
-                        "id": "test-rds-pg15",
-                        "name": "test-rds-pg15",
-                        "family": "postgres15",
+                {
+                    "type": "aws_db_parameter_group",
+                    "change": {
+                        "actions": ["delete"],
+                        "before": {
+                            "id": "test-rds-pg15",
+                            "name": "test-rds-pg15",
+                            "family": "postgres15",
+                        },
+                        "after": {},
+                        "after_unknown": {},
                     },
-                    "after": {},
-                    "after_unknown": {},
                 },
-            },
-        ]
-    })
+            ]
+        })
+    )
     validator = RDSPlanValidator(
         plan,
         input_object({
@@ -864,23 +886,25 @@ def test_validate_parameter_group_name_already_exists(
         "DBParameterGroupFamily": "postgres15",
     }
 
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_parameter_group",
-                "change": {
-                    "actions": ["create"],
-                    "before": None,
-                    "after": {
-                        "id": "test-rds-pg15",
-                        "name": "test-rds-pg15",
-                        "family": "postgres15",
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_parameter_group",
+                    "change": {
+                        "actions": ["create"],
+                        "before": None,
+                        "after": {
+                            "id": "test-rds-pg15",
+                            "name": "test-rds-pg15",
+                            "family": "postgres15",
+                        },
+                        "after_unknown": {},
                     },
-                    "after_unknown": {},
                 },
-            },
-        ]
-    })
+            ]
+        })
+    )
     validator = RDSPlanValidator(plan, input_object())
 
     errors = validator.validate()
@@ -892,18 +916,20 @@ def test_validate_parameter_group_name_already_exists(
 
 def test_validate_region_change() -> None:
     """Test region change"""
-    plan = Plan.model_validate({
-        "resource_changes": [
-            {
-                "type": "aws_db_instance",
-                "change": {
-                    "after": None,
-                    "before": {"region": "us-east-1"},
-                    "after_unknown": {},
-                },
-            }
-        ]
-    })
+    plan = Plan.model_validate(
+        plan_data({
+            "resource_changes": [
+                {
+                    "type": "aws_db_instance",
+                    "change": {
+                        "after": None,
+                        "before": {"region": "us-east-1"},
+                        "after_unknown": {},
+                    },
+                }
+            ]
+        })
+    )
     validator = RDSPlanValidator(
         plan,
         input_object({

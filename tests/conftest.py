@@ -192,6 +192,10 @@ DEFAULT_SOURCE_DB_PARAMETERS: dict[str, ParameterOutputTypeDef] = {
     }
 }
 
+DEFAULT_PLAN = {
+    "format_version": "1.2",
+}
+
 
 def input_data(additional_data: dict[str, Any] | None = None) -> dict:
     """Returns a parsed JSON input as dict"""
@@ -201,3 +205,8 @@ def input_data(additional_data: dict[str, Any] | None = None) -> dict:
 def input_object(additional_data: dict[str, Any] | None = None) -> AppInterfaceInput:
     """Returns an AppInterfaceInput object"""
     return AppInterfaceInput.model_validate(input_data(additional_data))
+
+
+def plan_data(additional_data: dict[str, Any] | None = None) -> dict:
+    """Returns a parsed JSON terraform plan as dict"""
+    return deep_merge(DEFAULT_PLAN, additional_data or {})
