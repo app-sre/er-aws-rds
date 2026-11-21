@@ -427,6 +427,135 @@ def test_run_when_create_blue_green_deployment_when_already_created(
         assert mock_aws_api.get_blue_green_deployment.call_count == 2
 
 
+REPLICA_SOURCE_INSTANCE: DBInstanceTypeDef = DEFAULT_RDS_INSTANCE | {
+    "ReadReplicaDBInstanceIdentifiers": ["test-rds-readonly"],
+}
+DELETION_PROTECTED_REPLICA_INSTANCE: DBInstanceTypeDef = DEFAULT_RDS_INSTANCE | {
+    "DBInstanceIdentifier": "test-rds-readonly",
+    "DeletionProtection": True,
+}
+DELETION_PROTECTION_DISABLED_REPLICA_INSTANCE: DBInstanceTypeDef = (
+    DEFAULT_RDS_INSTANCE
+    | {
+        "DBInstanceIdentifier": "test-rds-readonly",
+        "DeletionProtection": False,
+    }
+)
+
+
+@pytest.mark.parametrize("dry_run", [True, False])
+def test_run_refuses_blue_green_enable_when_replica_deletion_protection(
+    mock_aws_api: Mock,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test enable is refused while a read replica has deletion protection"""
+    setup_aws_api_side_effects(
+        mock_aws_api,
+        get_db_instance=[
+            REPLICA_SOURCE_INSTANCE,
+            DELETION_PROTECTED_REPLICA_INSTANCE,
+        ],
+        get_blue_green_deployment=[None],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
+    )
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(
+            build_blue_green_deployment_data(enabled=True, target={})
+        ),
+        dry_run=dry_run,
+    )
+
+    with pytest.raises(ValueError, match=r"test-rds-readonly.*two separate changes"):
+        manager.run()
+    mock_aws_api.create_blue_green_deployment.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("dry_run", "expected_state"),
+    [
+        (True, State.INIT),
+        (False, State.AVAILABLE),
+    ],
+)
+def test_run_create_blue_green_deployment_when_replica_deletion_protection_disabled(
+    mock_aws_api: Mock,
+    *,
+    dry_run: bool,
+    expected_state: State,
+) -> None:
+    """Test enable proceeds when the read replica has deletion protection disabled"""
+    setup_aws_api_side_effects(
+        mock_aws_api,
+        get_db_instance=[
+            REPLICA_SOURCE_INSTANCE,
+            DELETION_PROTECTION_DISABLED_REPLICA_INSTANCE,
+            DEFAULT_TARGET_RDS_INSTANCE,
+        ],
+        get_blue_green_deployment=[
+            None,
+            build_blue_green_deployment_response(status="AVAILABLE"),
+        ],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
+        get_db_parameters=[DEFAULT_SOURCE_DB_PARAMETERS],
+    )
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(
+            build_blue_green_deployment_data(enabled=True, target={})
+        ),
+        dry_run=dry_run,
+    )
+
+    state = manager.run()
+
+    assert state == expected_state
+    mock_aws_api.get_db_instance.assert_has_calls([
+        call("test-rds"),
+        call("test-rds-readonly"),
+    ])
+
+
+@pytest.mark.parametrize("dry_run", [True, False])
+def test_run_does_not_check_replicas_when_blue_green_deployment_exists(
+    mock_aws_api: Mock,
+    *,
+    dry_run: bool,
+) -> None:
+    """Test replicas are not checked once the Blue/Green Deployment exists"""
+    setup_aws_api_side_effects(
+        mock_aws_api,
+        get_db_instance=[
+            REPLICA_SOURCE_INSTANCE,
+            REPLICA_SOURCE_INSTANCE,
+            DEFAULT_TARGET_RDS_INSTANCE,
+            DEFAULT_TARGET_RDS_INSTANCE,
+        ],
+        get_blue_green_deployment=[
+            build_blue_green_deployment_response(status="PROVISIONING"),
+            build_blue_green_deployment_response(status="AVAILABLE"),
+        ],
+        get_db_parameter_group=[DEFAULT_TARGET_PARAMETER_GROUP],
+        get_blue_green_deployment_valid_upgrade_targets=[DEFAULT_VALID_UPGRADE_TARGETS],
+        get_db_parameters=[DEFAULT_SOURCE_DB_PARAMETERS],
+    )
+    manager = BlueGreenDeploymentManager(
+        aws_api=mock_aws_api,
+        app_interface_input=input_object(
+            build_blue_green_deployment_data(enabled=True)
+        ),
+        dry_run=dry_run,
+    )
+
+    state = manager.run()
+
+    assert state in {State.PROVISIONING, State.AVAILABLE}
+    mock_aws_api.create_blue_green_deployment.assert_not_called()
+    mock_aws_api.get_db_instance.assert_has_calls([call("test-rds")])
+    assert call("test-rds-readonly") not in mock_aws_api.get_db_instance.call_args_list
+
+
 @pytest.mark.parametrize(
     ("dry_run", "expected_state"),
     [

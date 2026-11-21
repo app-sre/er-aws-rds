@@ -271,7 +271,7 @@ def test_validate_blue_green_deployment_for_replica_with_deletion_protection() -
     })
     with pytest.raises(
         ValidationError,
-        match=r".*deletion_protection must be disabled when replica_source has blue_green_deployment enabled.*",
+        match=r".*deletion_protection must be disabled when replica_source has blue_green_deployment enabled.*two separate MRs.*",
     ):
         AppInterfaceInput.model_validate(mod_input)
 

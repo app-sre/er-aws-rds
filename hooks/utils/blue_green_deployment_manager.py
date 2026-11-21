@@ -135,6 +135,14 @@ class BlueGreenDeploymentManager:
             )
 
         db_instance = self.aws_api.get_db_instance(input_data.identifier)
+        if blue_green_deployment is None:
+            # no Blue/Green Deployment exists yet: this run would enable it.
+            # Refuse to enable while any read replica of the source still has
+            # deletion protection enabled in AWS, because replica changes are
+            # skipped once blue_green_deployment is enabled on the source.
+            self._raise_for_deletion_protected_read_replicas(
+                input_data.identifier, db_instance
+            )
         valid_upgrade_targets = (
             self.aws_api.get_blue_green_deployment_valid_upgrade_targets(
                 engine=db_instance["Engine"],
@@ -168,6 +176,41 @@ class BlueGreenDeploymentManager:
             target_db_instances=target_db_instances,
             source_db_parameters=source_db_parameters,
         )
+
+    def _raise_for_deletion_protected_read_replicas(
+        self,
+        identifier: str,
+        db_instance: DBInstanceTypeDef | None,
+    ) -> None:
+        """Refuse blue/green enable while a read replica has deletion protection.
+
+        Once blue_green_deployment is enabled on the source, the read replica
+        resources are skipped entirely, so a deletion_protection override on
+        the replica is never applied and the old instances cannot be deleted
+        after switchover (APPSRE-15756).
+        """
+        if db_instance is None:
+            return
+        protected_replicas = [
+            replica_identifier
+            for replica_identifier in db_instance.get(
+                "ReadReplicaDBInstanceIdentifiers"
+            )
+            or []
+            if (replica := self.aws_api.get_db_instance(replica_identifier))
+            and replica.get("DeletionProtection")
+        ]
+        if protected_replicas:
+            raise ValueError(
+                "blue_green_deployment cannot be enabled: read replica(s) "
+                f"{', '.join(protected_replicas)} of {identifier} still have "
+                "deletion_protection enabled in AWS. This requires two "
+                "separate changes: (1) set deletion_protection: false on the "
+                "replica and wait for it to be applied, then (2) enable "
+                "blue_green_deployment on the source in a later MR. Replica "
+                "changes are skipped once blue_green_deployment is enabled "
+                "on the source. See APPSRE-15756."
+            )
 
     def _fetch_source_db_parameters(
         self,
