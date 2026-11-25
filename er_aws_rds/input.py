@@ -398,7 +398,11 @@ class Rds(RdsAppInterface):
                 )
             if self.deletion_protection:
                 raise ValueError(
-                    "deletion_protection must be disabled when replica_source has blue_green_deployment enabled"
+                    "deletion_protection must be disabled when replica_source "
+                    "has blue_green_deployment enabled. Set "
+                    "deletion_protection: false on the replica and wait for it "
+                    "to be applied before enabling blue_green_deployment on "
+                    "the source (two separate MRs). See APPSRE-15756."
                 )
             if self.region != self.replica_source.region:
                 raise ValueError(

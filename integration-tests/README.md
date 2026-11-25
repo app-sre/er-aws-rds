@@ -72,6 +72,24 @@ erv2-itest \
 Do not pass `--keep` to the cleanup command. Scenario logs and working
 directories are stored under `.erv2-itests/`.
 
+## Read replica deletion protection guard
+
+The deletion-protection-guard scenario reuses a retained basic source
+instance in the same way. It creates a read replica with
+`deletion_protection: true`, then runs the source with
+`blue_green_deployment.enabled: true` as a dry-run and verifies the
+validation error refuses to enable Blue/Green while the replica is still
+protected. A following step disables the protection, and cleanup destroys
+the replica. Clean up the retained source with the basic scenario's cleanup
+step as shown above.
+
+```shell
+SOURCE_RUN_ID="<source-run-id-from-output>"
+erv2-itest \
+  --run-id "$SOURCE_RUN_ID" \
+  integration-tests/read-replica-deletion-protection-guard/scenario.yaml
+```
+
 ## Password reset during a storage update
 
 The primary-instance storage-guard scenario increases storage, then attempts a

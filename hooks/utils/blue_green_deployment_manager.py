@@ -135,6 +135,16 @@ class BlueGreenDeploymentManager:
             )
 
         db_instance = self.aws_api.get_db_instance(input_data.identifier)
+        # no Blue/Green Deployment exists yet: this run would enable it.
+        # Fetch the read replicas so the model can refuse to enable while
+        # any of them still has deletion protection enabled in AWS, because
+        # replica changes are skipped once blue_green_deployment is enabled
+        # on the source.
+        read_replica_db_instances = (
+            self._fetch_read_replica_db_instances(db_instance)
+            if blue_green_deployment is None
+            else []
+        )
         valid_upgrade_targets = (
             self.aws_api.get_blue_green_deployment_valid_upgrade_targets(
                 engine=db_instance["Engine"],
@@ -167,6 +177,26 @@ class BlueGreenDeploymentManager:
             source_db_instances=source_db_instances,
             target_db_instances=target_db_instances,
             source_db_parameters=source_db_parameters,
+            read_replica_db_instances=read_replica_db_instances,
+        )
+
+    def _fetch_read_replica_db_instances(
+        self,
+        db_instance: DBInstanceTypeDef | None,
+    ) -> list[DBInstanceTypeDef]:
+        if db_instance is None:
+            return []
+        return list(
+            filter(
+                None,
+                (
+                    self.aws_api.get_db_instance(identifier)
+                    for identifier in db_instance.get(
+                        "ReadReplicaDBInstanceIdentifiers"
+                    )
+                    or []
+                ),
+            )
         )
 
     def _fetch_source_db_parameters(

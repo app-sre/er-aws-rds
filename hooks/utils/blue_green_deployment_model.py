@@ -55,6 +55,7 @@ class BlueGreenDeploymentModel(BaseModel):
     source_db_instances: list[DBInstanceTypeDef] = []
     target_db_instances: list[DBInstanceTypeDef] = []
     source_db_parameters: dict[str, ParameterOutputTypeDef] = {}
+    read_replica_db_instances: list[DBInstanceTypeDef] = []
     valid_upgrade_targets: dict[str, UpgradeTargetTypeDef] = {}
     _pending_prepares: set[PendingPrepare] = set()
 
@@ -103,6 +104,7 @@ class BlueGreenDeploymentModel(BaseModel):
 
     def _validate_creation_requirements(self) -> None:
         self._validate_db_instance_exist()
+        self._validate_read_replica_deletion_protection()
         self._validate_target_parameter_group()
         self._validate_deletion_protection()
         self._validate_backup_retention_period()
@@ -120,6 +122,35 @@ class BlueGreenDeploymentModel(BaseModel):
     def _validate_db_instance_exist(self) -> Self:
         if self.db_instance is None:
             raise ValueError(f"DB Instance not found: {self.input_data.identifier}")
+        return self
+
+    def _validate_read_replica_deletion_protection(self) -> Self:
+        """Refuse enabling blue/green deployment while a read replica has deletion protection.
+
+        Once blue_green_deployment is enabled on the source, the read replica
+        resources are skipped entirely, so a deletion_protection override on
+        the replica is never applied and the old instances cannot be deleted
+        after switchover (APPSRE-15756).
+
+        The manager only fetches read replicas when no Blue/Green Deployment
+        exists yet, so the list is empty otherwise.
+        """
+        protected_replicas = sorted(
+            replica["DBInstanceIdentifier"]
+            for replica in self.read_replica_db_instances
+            if replica.get("DeletionProtection")
+        )
+        if protected_replicas:
+            raise ValueError(
+                "blue_green_deployment cannot be enabled: read replica(s) "
+                f"{', '.join(protected_replicas)} of "
+                f"{self.input_data.identifier} still have deletion_protection "
+                "enabled in AWS. This requires two separate changes: "
+                "(1) set deletion_protection: false on the replica and wait "
+                "for it to be applied, then (2) enable blue_green_deployment "
+                "on the source in a later MR. Replica changes are skipped "
+                "once blue_green_deployment is enabled on the source."
+            )
         return self
 
     def _validate_target_parameter_group(self) -> Self:
